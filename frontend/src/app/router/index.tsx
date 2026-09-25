@@ -1,13 +1,34 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { Navigate, createBrowserRouter } from 'react-router-dom'
+import { AppLayout } from '@/app/layouts/AppLayout'
+import { AttendancePage } from '@/features/attendance/AttendancePage'
+import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { ExpensesPage } from '@/features/expenses/ExpensesPage'
+import { LeadsPage } from '@/features/leads/LeadsPage'
+import { MembersPage } from '@/features/members/MembersPage'
+import { MembershipsPage } from '@/features/memberships/MembershipsPage'
+import { NotFoundPage } from '@/features/not-found/NotFoundPage'
+import { PaymentsPage } from '@/features/payments/PaymentsPage'
+import { ReportsPage } from '@/features/reports/ReportsPage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
+import { TrainersPage } from '@/features/trainers/TrainersPage'
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: (
-      <div className="flex min-h-screen flex-col items-center justify-center">
-        <h1 className="text-2xl font-semibold">Gym Management System</h1>
-        <p className="mt-2 text-gray-500">Frontend foundation is ready.</p>
-      </div>
-    ),
+    element: <AppLayout />,
+    children: [
+      { index: true, element: <Navigate to="/dashboard" replace /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'members', element: <MembersPage /> },
+      { path: 'memberships', element: <MembershipsPage /> },
+      { path: 'attendance', element: <AttendancePage /> },
+      { path: 'payments', element: <PaymentsPage /> },
+      { path: 'trainers', element: <TrainersPage /> },
+      { path: 'leads', element: <LeadsPage /> },
+      { path: 'expenses', element: <ExpensesPage /> },
+      { path: 'reports', element: <ReportsPage /> },
+      { path: 'settings', element: <SettingsPage /> },
+    ],
   },
+  { path: '*', element: <NotFoundPage /> },
 ])
