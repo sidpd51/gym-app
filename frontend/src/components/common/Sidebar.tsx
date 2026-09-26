@@ -12,6 +12,7 @@ import {
   Settings,
   UserPlus,
   Users,
+  Wrench,
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -36,6 +37,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Leads', icon: UserPlus, to: '/leads' },
   { label: 'Expenses', icon: Receipt, to: '/expenses' },
   { label: 'Inventory', icon: Package, to: '/inventory' },
+  { label: 'Equipment', icon: Wrench, to: '/equipment' },
   { label: 'Reports', icon: BarChart2, to: '/reports' },
 ]
 

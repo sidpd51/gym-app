@@ -11,6 +11,11 @@ import { CreateInventoryItemPage } from '@/features/inventory/CreateInventoryIte
 import { EditInventoryItemPage } from '@/features/inventory/EditInventoryItemPage'
 import { InventoryItemDetailsPage } from '@/features/inventory/InventoryItemDetailsPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
+import { AddMaintenancePage } from '@/features/equipment/AddMaintenancePage'
+import { CreateEquipmentPage } from '@/features/equipment/CreateEquipmentPage'
+import { EditEquipmentPage } from '@/features/equipment/EditEquipmentPage'
+import { EquipmentDetailsPage } from '@/features/equipment/EquipmentDetailsPage'
+import { EquipmentPage } from '@/features/equipment/EquipmentPage'
 import { CreateLeadPage } from '@/features/leads/CreateLeadPage'
 import { EditLeadPage } from '@/features/leads/EditLeadPage'
 import { LeadDetailsPage } from '@/features/leads/LeadDetailsPage'
@@ -72,6 +77,11 @@ export const router = createBrowserRouter([
       { path: 'inventory/new', element: <CreateInventoryItemPage /> },
       { path: 'inventory/:itemId/edit', element: <EditInventoryItemPage /> },
       { path: 'inventory/:itemId', element: <InventoryItemDetailsPage /> },
+      { path: 'equipment', element: <EquipmentPage /> },
+      { path: 'equipment/new', element: <CreateEquipmentPage /> },
+      { path: 'equipment/:equipmentId/edit', element: <EditEquipmentPage /> },
+      { path: 'equipment/:equipmentId/maintenance/new', element: <AddMaintenancePage /> },
+      { path: 'equipment/:equipmentId', element: <EquipmentDetailsPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
