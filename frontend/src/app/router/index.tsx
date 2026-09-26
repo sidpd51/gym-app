@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { AttendancePage } from '@/features/attendance/AttendancePage'
+import { MarkAttendancePage } from '@/features/attendance/MarkAttendancePage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
 import { LeadsPage } from '@/features/leads/LeadsPage'
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: 'membership-plans/new', element: <CreateMembershipPlanPage /> },
       { path: 'membership-plans/:planId/edit', element: <EditMembershipPlanPage /> },
       { path: 'attendance', element: <AttendancePage /> },
+      { path: 'attendance/new', element: <MarkAttendancePage /> },
       { path: 'payments', element: <PaymentsPage /> },
       { path: 'payments/new', element: <RecordPaymentPage /> },
       { path: 'payments/:paymentId', element: <PaymentDetailsPage /> },
