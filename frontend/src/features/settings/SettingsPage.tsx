@@ -1,8 +1,54 @@
+import { useState } from 'react'
+import { SETTINGS_SECTIONS } from './types/settings.types'
+import type { GymSettings, SettingsSection } from './types/settings.types'
+import { defaultSettings } from './data/settings.mock'
+import { SettingsSidebar } from './components/SettingsSidebar'
+import { GymProfileSettings } from './components/GymProfileSettings'
+import { MembershipSettings } from './components/MembershipSettings'
+import { AttendanceSettings } from './components/AttendanceSettings'
+import { PreferenceSettings } from './components/PreferenceSettings'
+
 export function SettingsPage() {
+  const [activeSection, setActiveSection] = useState<SettingsSection>('gym-profile')
+  const [settingsSource, setSettingsSource] = useState<GymSettings>(defaultSettings)
+
+  function handleSave(updated: GymSettings) {
+    setSettingsSource(updated)
+  }
+
+  const activeLabel = SETTINGS_SECTIONS.find((s) => s.id === activeSection)?.label ?? ''
+
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-zinc-900">Settings</h2>
-      <p className="mt-2 text-zinc-500">Settings will be implemented in a later phase.</p>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-semibold text-zinc-900">Settings</h1>
+        <p className="mt-0.5 text-sm text-zinc-500">Manage your gym's configuration.</p>
+      </div>
+
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        <aside className="lg:w-44 lg:shrink-0">
+          <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} />
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          <p className="mb-4 text-xs font-medium uppercase tracking-wide text-zinc-400 lg:hidden">
+            {activeLabel}
+          </p>
+
+          {activeSection === 'gym-profile' && (
+            <GymProfileSettings settings={settingsSource} onSave={handleSave} />
+          )}
+          {activeSection === 'membership' && (
+            <MembershipSettings settings={settingsSource} onSave={handleSave} />
+          )}
+          {activeSection === 'attendance' && (
+            <AttendanceSettings settings={settingsSource} onSave={handleSave} />
+          )}
+          {activeSection === 'preferences' && (
+            <PreferenceSettings settings={settingsSource} onSave={handleSave} />
+          )}
+        </div>
+      </div>
     </div>
   )
 }
