@@ -7,7 +7,9 @@ import { LeadsPage } from '@/features/leads/LeadsPage'
 import { CreateMemberPage } from '@/features/members/CreateMemberPage'
 import { MemberDetailsPage } from '@/features/members/MemberDetailsPage'
 import { MembersPage } from '@/features/members/MembersPage'
-import { MembershipsPage } from '@/features/memberships/MembershipsPage'
+import { CreateMembershipPlanPage } from '@/features/membership-plans/CreateMembershipPlanPage'
+import { EditMembershipPlanPage } from '@/features/membership-plans/EditMembershipPlanPage'
+import { MembershipPlansPage } from '@/features/membership-plans/MembershipPlansPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { PaymentsPage } from '@/features/payments/PaymentsPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
@@ -24,7 +26,9 @@ export const router = createBrowserRouter([
       { path: 'members', element: <MembersPage /> },
       { path: 'members/new', element: <CreateMemberPage /> },
       { path: 'members/:memberId', element: <MemberDetailsPage /> },
-      { path: 'memberships', element: <MembershipsPage /> },
+      { path: 'membership-plans', element: <MembershipPlansPage /> },
+      { path: 'membership-plans/new', element: <CreateMembershipPlanPage /> },
+      { path: 'membership-plans/:planId/edit', element: <EditMembershipPlanPage /> },
       { path: 'attendance', element: <AttendancePage /> },
       { path: 'payments', element: <PaymentsPage /> },
       { path: 'trainers', element: <TrainersPage /> },
