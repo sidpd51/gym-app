@@ -1,7 +1,9 @@
+import { Link } from 'react-router-dom'
 import type { MembershipHistoryItem } from '../types/member.types'
 import { MemberStatusBadge } from './MemberStatusBadge'
 
 interface CurrentMembershipCardProps {
+  memberId: string
   membership: MembershipHistoryItem | undefined
 }
 
@@ -13,10 +15,22 @@ function formatDate(dateStr: string): string {
   })
 }
 
-export function CurrentMembershipCard({ membership }: CurrentMembershipCardProps) {
+export function CurrentMembershipCard({ memberId, membership }: CurrentMembershipCardProps) {
+  const showCreateLink = membership?.status !== 'ACTIVE'
+
   return (
     <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
-      <h3 className="text-sm font-semibold text-zinc-900">Current Membership</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-zinc-900">Current Membership</h3>
+        {showCreateLink && (
+          <Link
+            to={`/members/${memberId}/membership/new`}
+            className="text-xs font-medium text-blue-600 hover:underline"
+          >
+            + Create Membership
+          </Link>
+        )}
+      </div>
 
       {membership ? (
         <div className="mt-4 space-y-3">

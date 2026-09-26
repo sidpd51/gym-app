@@ -62,7 +62,7 @@ export function MemberDetailsPage() {
 
         {/* Right column */}
         <div className="space-y-5">
-          <CurrentMembershipCard membership={currentMembership} />
+          <CurrentMembershipCard memberId={member.id} membership={currentMembership} />
 
           {/* Trainer card */}
           <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
