@@ -8,6 +8,7 @@ import { LeadsPage } from '@/features/leads/LeadsPage'
 import { CreateMemberPage } from '@/features/members/CreateMemberPage'
 import { MemberDetailsPage } from '@/features/members/MemberDetailsPage'
 import { MembersPage } from '@/features/members/MembersPage'
+import { TrainerAssignmentPage } from '@/features/member-trainer/TrainerAssignmentPage'
 import { CreateMembershipPage } from '@/features/memberships/CreateMembershipPage'
 import { MembershipsPage } from '@/features/memberships/MembershipsPage'
 import { CreateMembershipPlanPage } from '@/features/membership-plans/CreateMembershipPlanPage'
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: 'members', element: <MembersPage /> },
       { path: 'members/new', element: <CreateMemberPage /> },
       { path: 'members/:memberId/membership/new', element: <CreateMembershipPage /> },
+      { path: 'members/:memberId/trainer/assign', element: <TrainerAssignmentPage /> },
       { path: 'members/:memberId', element: <MemberDetailsPage /> },
       { path: 'memberships', element: <MembershipsPage /> },
       { path: 'membership-plans', element: <MembershipPlansPage /> },

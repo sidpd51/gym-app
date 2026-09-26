@@ -1,4 +1,4 @@
-import { ArrowLeft, Dumbbell } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { memberSupplementalData } from './data/member-details.mock'
 import { membersMockData } from './data/members.mock'
@@ -9,6 +9,8 @@ import { MemberHeader } from './components/MemberHeader'
 import { MembershipHistory } from './components/MembershipHistory'
 import { PaymentHistory } from './components/PaymentHistory'
 import { PersonalInformation } from './components/PersonalInformation'
+import { CurrentTrainerCard } from '../member-trainer/components/CurrentTrainerCard'
+import { TrainerAssignmentHistory } from '../member-trainer/components/TrainerAssignmentHistory'
 
 export function MemberDetailsPage() {
   const { memberId } = useParams<{ memberId: string }>()
@@ -64,20 +66,7 @@ export function MemberDetailsPage() {
         <div className="space-y-5">
           <CurrentMembershipCard memberId={member.id} membership={currentMembership} />
 
-          {/* Trainer card */}
-          <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
-            <h3 className="text-sm font-semibold text-zinc-900">Trainer</h3>
-            {member.trainerName ? (
-              <div className="mt-3 flex items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50">
-                  <Dumbbell className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-                </span>
-                <span className="font-medium text-zinc-900">{member.trainerName}</span>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-zinc-500">No trainer assigned</p>
-            )}
-          </div>
+          <CurrentTrainerCard memberId={member.id} />
         </div>
       </div>
 
@@ -89,6 +78,9 @@ export function MemberDetailsPage() {
 
       {/* Payment history */}
       <PaymentHistory payments={supplemental.paymentHistory} />
+
+      {/* Trainer assignment history */}
+      <TrainerAssignmentHistory memberId={member.id} />
     </div>
   )
 }
