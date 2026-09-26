@@ -3,6 +3,9 @@ import { AppLayout } from '@/app/layouts/AppLayout'
 import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { MarkAttendancePage } from '@/features/attendance/MarkAttendancePage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { CreateExpensePage } from '@/features/expenses/CreateExpensePage'
+import { EditExpensePage } from '@/features/expenses/EditExpensePage'
+import { ExpenseDetailsPage } from '@/features/expenses/ExpenseDetailsPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
 import { CreateLeadPage } from '@/features/leads/CreateLeadPage'
 import { EditLeadPage } from '@/features/leads/EditLeadPage'
@@ -58,6 +61,9 @@ export const router = createBrowserRouter([
       { path: 'leads/:leadId/edit', element: <EditLeadPage /> },
       { path: 'leads/:leadId', element: <LeadDetailsPage /> },
       { path: 'expenses', element: <ExpensesPage /> },
+      { path: 'expenses/new', element: <CreateExpensePage /> },
+      { path: 'expenses/:expenseId/edit', element: <EditExpensePage /> },
+      { path: 'expenses/:expenseId', element: <ExpenseDetailsPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
