@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   BarChart2,
   Building2,
   CalendarCheck,
@@ -26,6 +27,7 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
   { label: 'Members', icon: Users, to: '/members' },
+  { label: 'Memberships', icon: BadgeCheck, to: '/memberships' },
   { label: 'Membership Plans', icon: CreditCard, to: '/membership-plans' },
   { label: 'Attendance', icon: CalendarCheck, to: '/attendance' },
   { label: 'Payments', icon: DollarSign, to: '/payments' },
