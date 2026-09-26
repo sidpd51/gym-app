@@ -7,6 +7,10 @@ import { CreateExpensePage } from '@/features/expenses/CreateExpensePage'
 import { EditExpensePage } from '@/features/expenses/EditExpensePage'
 import { ExpenseDetailsPage } from '@/features/expenses/ExpenseDetailsPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
+import { CreateInventoryItemPage } from '@/features/inventory/CreateInventoryItemPage'
+import { EditInventoryItemPage } from '@/features/inventory/EditInventoryItemPage'
+import { InventoryItemDetailsPage } from '@/features/inventory/InventoryItemDetailsPage'
+import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { CreateLeadPage } from '@/features/leads/CreateLeadPage'
 import { EditLeadPage } from '@/features/leads/EditLeadPage'
 import { LeadDetailsPage } from '@/features/leads/LeadDetailsPage'
@@ -64,6 +68,10 @@ export const router = createBrowserRouter([
       { path: 'expenses/new', element: <CreateExpensePage /> },
       { path: 'expenses/:expenseId/edit', element: <EditExpensePage /> },
       { path: 'expenses/:expenseId', element: <ExpenseDetailsPage /> },
+      { path: 'inventory', element: <InventoryPage /> },
+      { path: 'inventory/new', element: <CreateInventoryItemPage /> },
+      { path: 'inventory/:itemId/edit', element: <EditInventoryItemPage /> },
+      { path: 'inventory/:itemId', element: <InventoryItemDetailsPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],

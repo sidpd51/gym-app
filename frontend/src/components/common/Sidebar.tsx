@@ -7,6 +7,7 @@ import {
   DollarSign,
   Dumbbell,
   LayoutDashboard,
+  Package,
   Receipt,
   Settings,
   UserPlus,
@@ -34,6 +35,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Trainers', icon: Dumbbell, to: '/trainers' },
   { label: 'Leads', icon: UserPlus, to: '/leads' },
   { label: 'Expenses', icon: Receipt, to: '/expenses' },
+  { label: 'Inventory', icon: Package, to: '/inventory' },
   { label: 'Reports', icon: BarChart2, to: '/reports' },
 ]
 
