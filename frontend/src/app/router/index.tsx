@@ -4,6 +4,9 @@ import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { MarkAttendancePage } from '@/features/attendance/MarkAttendancePage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
+import { CreateLeadPage } from '@/features/leads/CreateLeadPage'
+import { EditLeadPage } from '@/features/leads/EditLeadPage'
+import { LeadDetailsPage } from '@/features/leads/LeadDetailsPage'
 import { LeadsPage } from '@/features/leads/LeadsPage'
 import { CreateMemberPage } from '@/features/members/CreateMemberPage'
 import { MemberDetailsPage } from '@/features/members/MemberDetailsPage'
@@ -51,6 +54,9 @@ export const router = createBrowserRouter([
       { path: 'trainers/:trainerId/edit', element: <EditTrainerPage /> },
       { path: 'trainers/:trainerId', element: <TrainerDetailsPage /> },
       { path: 'leads', element: <LeadsPage /> },
+      { path: 'leads/new', element: <CreateLeadPage /> },
+      { path: 'leads/:leadId/edit', element: <EditLeadPage /> },
+      { path: 'leads/:leadId', element: <LeadDetailsPage /> },
       { path: 'expenses', element: <ExpensesPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'settings', element: <SettingsPage /> },
