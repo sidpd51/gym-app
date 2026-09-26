@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { UserPlus } from 'lucide-react'
 import type { MemberStatus, MembershipPlan } from './types/member.types'
 import { membersMockData } from './data/members.mock'
 import { MemberFilters } from './components/MemberFilters'
@@ -65,11 +67,20 @@ export function MembersPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-semibold text-zinc-900">Members</h2>
-        <p className="mt-0.5 text-sm text-zinc-500">
-          {membersMockData.length} total members
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900">Members</h2>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            {membersMockData.length} total members
+          </p>
+        </div>
+        <Link
+          to="/members/new"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+        >
+          <UserPlus className="h-4 w-4" aria-hidden="true" />
+          Add Member
+        </Link>
       </div>
 
       <MemberFilters
