@@ -17,15 +17,17 @@ function getColorClass(name: string): string {
 interface MemberAvatarProps {
   firstName: string
   lastName: string
+  size?: 'sm' | 'lg'
 }
 
-export function MemberAvatar({ firstName, lastName }: MemberAvatarProps) {
+export function MemberAvatar({ firstName, lastName, size = 'sm' }: MemberAvatarProps) {
   const initials = `${firstName[0]}${lastName[0]}`.toUpperCase()
   const colorClass = getColorClass(firstName + lastName)
+  const sizeClass = size === 'lg' ? 'h-14 w-14 text-lg' : 'h-8 w-8 text-xs'
 
   return (
     <span
-      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${colorClass}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold ${colorClass} ${sizeClass}`}
       aria-hidden="true"
     >
       {initials}

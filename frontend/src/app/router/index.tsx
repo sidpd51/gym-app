@@ -4,7 +4,7 @@ import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
 import { LeadsPage } from '@/features/leads/LeadsPage'
-import { MemberDetailsPlaceholderPage } from '@/features/members/MemberDetailsPlaceholderPage'
+import { MemberDetailsPage } from '@/features/members/MemberDetailsPage'
 import { MembersPage } from '@/features/members/MembersPage'
 import { MembershipsPage } from '@/features/memberships/MembershipsPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
@@ -21,7 +21,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'members', element: <MembersPage /> },
-      { path: 'members/:memberId', element: <MemberDetailsPlaceholderPage /> },
+      { path: 'members/:memberId', element: <MemberDetailsPage /> },
       { path: 'memberships', element: <MembershipsPage /> },
       { path: 'attendance', element: <AttendancePage /> },
       { path: 'payments', element: <PaymentsPage /> },

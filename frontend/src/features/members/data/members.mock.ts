@@ -13,6 +13,10 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2026-12-31',
     trainerName: 'Amit Sharma',
     joiningDate: '2026-01-05',
+    dateOfBirth: '1992-07-14',
+    gender: 'Male',
+    address: '12, Shanti Nagar, Pune, Maharashtra 411001',
+    emergencyContact: 'Sunita Kumar (Wife) — 9876543211',
   },
   {
     id: 'm002',
@@ -26,6 +30,9 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2026-10-30',
     trainerName: 'Priya Desai',
     joiningDate: '2026-03-15',
+    dateOfBirth: '1995-03-22',
+    gender: 'Female',
+    address: '5, Rose Apartments, Baner, Pune 411045',
   },
   {
     id: 'm003',
@@ -38,6 +45,7 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2026-11-20',
     trainerName: 'Rahul Verma',
     joiningDate: '2026-02-20',
+    gender: 'Male',
   },
   {
     id: 'm004',
@@ -51,6 +59,10 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2026-08-10',
     trainerName: 'Amit Sharma',
     joiningDate: '2025-06-10',
+    dateOfBirth: '1988-11-03',
+    gender: 'Male',
+    address: '78, Green Park Colony, Nagpur, Maharashtra 440001',
+    emergencyContact: 'Anita Das (Sister) — 9900112234',
   },
   {
     id: 'm005',
@@ -63,6 +75,10 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2027-01-01',
     trainerName: 'Priya Desai',
     joiningDate: '2026-04-01',
+    dateOfBirth: '1990-05-17',
+    gender: 'Female',
+    address: 'B-204, Sai Complex, Viman Nagar, Pune 411014',
+    emergencyContact: 'Ramesh Patel (Husband) — 9823456790',
   },
   {
     id: 'm006',
@@ -88,6 +104,8 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2026-10-18',
     trainerName: 'Amit Sharma',
     joiningDate: '2026-05-18',
+    dateOfBirth: '1997-09-08',
+    gender: 'Female',
   },
   {
     id: 'm008',
@@ -126,6 +144,10 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2027-03-08',
     trainerName: 'Amit Sharma',
     joiningDate: '2026-03-08',
+    dateOfBirth: '1985-02-28',
+    gender: 'Male',
+    address: '22, Rajiv Colony, Hyderabad, Telangana 500001',
+    emergencyContact: 'Lakshmi Reddy (Wife) — 9012345671',
   },
   {
     id: 'm011',
@@ -163,6 +185,9 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2027-02-17',
     trainerName: 'Amit Sharma',
     joiningDate: '2026-02-17',
+    dateOfBirth: '1993-12-01',
+    gender: 'Female',
+    address: 'C-7, Sea View Residency, Kochi, Kerala 682001',
   },
   {
     id: 'm014',
@@ -201,6 +226,9 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2026-10-19',
     trainerName: 'Amit Sharma',
     joiningDate: '2026-01-19',
+    dateOfBirth: '1991-06-30',
+    gender: 'Male',
+    address: '9, MG Road, Indore, Madhya Pradesh 452001',
   },
   {
     id: 'm017',
@@ -238,6 +266,9 @@ export const membersMockData: Member[] = [
     membershipEndDate: '2026-09-22',
     trainerName: 'Amit Sharma',
     joiningDate: '2026-03-22',
+    dateOfBirth: '1996-04-11',
+    gender: 'Female',
+    address: '34, Lotus Colony, Chennai, Tamil Nadu 600001',
   },
   {
     id: 'm020',
