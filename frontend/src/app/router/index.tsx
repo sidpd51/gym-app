@@ -19,6 +19,9 @@ import { PaymentsPage } from '@/features/payments/PaymentsPage'
 import { RecordPaymentPage } from '@/features/payments/RecordPaymentPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { CreateTrainerPage } from '@/features/trainers/CreateTrainerPage'
+import { EditTrainerPage } from '@/features/trainers/EditTrainerPage'
+import { TrainerDetailsPage } from '@/features/trainers/TrainerDetailsPage'
 import { TrainersPage } from '@/features/trainers/TrainersPage'
 
 export const router = createBrowserRouter([
@@ -42,6 +45,9 @@ export const router = createBrowserRouter([
       { path: 'payments/new', element: <RecordPaymentPage /> },
       { path: 'payments/:paymentId', element: <PaymentDetailsPage /> },
       { path: 'trainers', element: <TrainersPage /> },
+      { path: 'trainers/new', element: <CreateTrainerPage /> },
+      { path: 'trainers/:trainerId/edit', element: <EditTrainerPage /> },
+      { path: 'trainers/:trainerId', element: <TrainerDetailsPage /> },
       { path: 'leads', element: <LeadsPage /> },
       { path: 'expenses', element: <ExpensesPage /> },
       { path: 'reports', element: <ReportsPage /> },
