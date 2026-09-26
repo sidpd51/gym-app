@@ -13,7 +13,9 @@ import { CreateMembershipPlanPage } from '@/features/membership-plans/CreateMemb
 import { EditMembershipPlanPage } from '@/features/membership-plans/EditMembershipPlanPage'
 import { MembershipPlansPage } from '@/features/membership-plans/MembershipPlansPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
+import { PaymentDetailsPage } from '@/features/payments/PaymentDetailsPage'
 import { PaymentsPage } from '@/features/payments/PaymentsPage'
+import { RecordPaymentPage } from '@/features/payments/RecordPaymentPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { TrainersPage } from '@/features/trainers/TrainersPage'
@@ -35,6 +37,8 @@ export const router = createBrowserRouter([
       { path: 'membership-plans/:planId/edit', element: <EditMembershipPlanPage /> },
       { path: 'attendance', element: <AttendancePage /> },
       { path: 'payments', element: <PaymentsPage /> },
+      { path: 'payments/new', element: <RecordPaymentPage /> },
+      { path: 'payments/:paymentId', element: <PaymentDetailsPage /> },
       { path: 'trainers', element: <TrainersPage /> },
       { path: 'leads', element: <LeadsPage /> },
       { path: 'expenses', element: <ExpensesPage /> },
