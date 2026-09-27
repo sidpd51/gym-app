@@ -17,6 +17,7 @@ export type Permission =
   | 'settings:view' | 'settings:edit'
   | 'notifications:view' | 'notifications:create'
   | 'profile:view' | 'profile:update'
+  | 'audit-logs:view'
 
 const ALL_PERMISSIONS: Permission[] = [
   'dashboard:view',
@@ -35,6 +36,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'settings:view', 'settings:edit',
   'notifications:view', 'notifications:create',
   'profile:view', 'profile:update',
+  'audit-logs:view',
 ]
 
 export const rolePermissions: Record<UserRole, Permission[]> = {

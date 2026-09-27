@@ -48,6 +48,8 @@ import { CreateUserPage } from '@/features/users/pages/CreateUserPage'
 import { EditUserPage } from '@/features/users/pages/EditUserPage'
 import { UserDetailsPage } from '@/features/users/pages/UserDetailsPage'
 import { UsersPage } from '@/features/users/pages/UsersPage'
+import { AuditLogsPage } from '@/features/audit-logs/AuditLogsPage'
+import { AuditLogDetailsPage } from '@/features/audit-logs/AuditLogDetailsPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -104,6 +106,8 @@ export const router = createBrowserRouter([
       { path: 'users/new', element: <ProtectedRoute requiredPermission="users:create"><CreateUserPage /></ProtectedRoute> },
       { path: 'users/:userId/edit', element: <ProtectedRoute requiredPermission="users:edit"><EditUserPage /></ProtectedRoute> },
       { path: 'users/:userId', element: <ProtectedRoute requiredPermission="users:view"><UserDetailsPage /></ProtectedRoute> },
+      { path: 'audit-logs', element: <ProtectedRoute requiredPermission="audit-logs:view"><AuditLogsPage /></ProtectedRoute> },
+      { path: 'audit-logs/:auditLogId', element: <ProtectedRoute requiredPermission="audit-logs:view"><AuditLogDetailsPage /></ProtectedRoute> },
       { path: 'unauthorized', element: <UnauthorizedPage /> },
     ],
   },

@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   CalendarCheck,
+  ClipboardList,
   CreditCard,
   DollarSign,
   Dumbbell,
@@ -46,6 +47,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Reports', icon: BarChart2, to: '/reports', permission: 'reports:view' },
   { label: 'Notifications', icon: Bell, to: '/notifications', permission: 'notifications:view' },
   { label: 'Users', icon: Shield, to: '/users', permission: 'users:view' },
+  { label: 'Audit Logs', icon: ClipboardList, to: '/audit-logs', permission: 'audit-logs:view' },
 ]
 
 function NavItemLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
