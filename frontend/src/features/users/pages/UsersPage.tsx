@@ -3,18 +3,19 @@ import { Link } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import type { UserRole, UserStatus } from '../types/user.types'
-import { usersMockData } from '../data/users.mock'
+import { useUsers } from '../hooks/useUsers'
 import { UserFilters } from '../components/UserFilters'
 import { UserTable } from '../components/UserTable'
 
 export function UsersPage() {
+  const { users } = useUsers()
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL')
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return usersMockData.filter((u) => {
+    return users.filter((u) => {
       if (roleFilter !== 'ALL' && u.role !== roleFilter) return false
       if (statusFilter !== 'ALL' && u.status !== statusFilter) return false
       if (q) {
@@ -30,7 +31,7 @@ export function UsersPage() {
       }
       return true
     })
-  }, [search, roleFilter, statusFilter])
+  }, [users, search, roleFilter, statusFilter])
 
   function handleSearchChange(value: string) {
     setSearch(value)

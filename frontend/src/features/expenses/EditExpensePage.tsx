@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { expensesMockData } from './data/expenses.mock'
+import { useExpense } from './hooks/useExpenses'
 import { ExpenseForm } from './components/ExpenseForm'
 
 export function EditExpensePage() {
   const { expenseId } = useParams<{ expenseId: string }>()
   const navigate = useNavigate()
 
-  const expense = expensesMockData.find((e) => e.id === expenseId)
+  const { expense } = useExpense(expenseId)
 
   if (!expense) {
     return (

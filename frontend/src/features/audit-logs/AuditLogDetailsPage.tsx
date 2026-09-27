@@ -1,8 +1,8 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { usersMockData } from '@/features/users/data/users.mock'
+import { useUsers } from '@/features/users/hooks/useUsers'
 import { UserRoleBadge } from '@/features/users/components/UserRoleBadge'
-import { auditLogsMockData } from './data/audit-logs.mock'
+import { useAuditLog } from './hooks/useAuditLogs'
 import { AUDIT_ENTITY_LABELS } from './types/audit-log.types'
 import { AuditActionBadge } from './components/AuditActionBadge'
 import { AuditStatusBadge } from './components/AuditStatusBadge'
@@ -33,7 +33,8 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 export function AuditLogDetailsPage() {
   const { auditLogId } = useParams<{ auditLogId: string }>()
-  const log = auditLogsMockData.find((l) => l.id === auditLogId)
+  const { log } = useAuditLog(auditLogId)
+  const { users } = useUsers()
 
   if (!log) {
     return (
@@ -55,7 +56,7 @@ export function AuditLogDetailsPage() {
     )
   }
 
-  const user = usersMockData.find((u) => u.id === log.userId)
+  const user = users.find((u) => u.id === log.userId)
   const { date, time } = formatAuditTimestamp(log.timestamp)
   const changes = log.metadata ? extractChanges(log.metadata) : []
   const otherMeta = log.metadata ? extractOtherMetadata(log.metadata) : {}

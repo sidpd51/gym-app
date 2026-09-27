@@ -1,14 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { memberSupplementalData } from '../members/data/member-details.mock'
-import { membersMockData } from '../members/data/members.mock'
+import { useMember } from '../members/hooks/useMembers'
 import { MembershipForm } from './components/MembershipForm'
 
 export function CreateMembershipPage() {
   const { memberId } = useParams<{ memberId: string }>()
   const navigate = useNavigate()
 
-  const member = membersMockData.find((m) => m.id === memberId)
+  const { member, supplementalData } = useMember(memberId)
 
   if (!member) {
     return (
@@ -30,8 +29,7 @@ export function CreateMembershipPage() {
     )
   }
 
-  const supplemental = memberSupplementalData[member.id]
-  const hasActiveMembership = supplemental?.membershipHistory[0]?.status === 'ACTIVE'
+  const hasActiveMembership = supplementalData?.membershipHistory[0]?.status === 'ACTIVE'
 
   if (hasActiveMembership) {
     return (

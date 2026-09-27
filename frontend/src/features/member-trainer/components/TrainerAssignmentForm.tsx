@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { trainersMockData } from '../../trainers/data/trainers.mock'
+import { useTrainers } from '../../trainers/hooks/useTrainers'
 import { assignTrainerSchema, type AssignTrainerFormValues } from '../schemas/member-trainer.schema'
 
 function getTodayString(): string {
@@ -47,6 +47,7 @@ export function TrainerAssignmentForm({
     },
   })
 
+  const { trainers } = useTrainers()
   const selectedTrainerId = watch('trainerId')
 
   const isDuplicate = useMemo(
@@ -54,7 +55,7 @@ export function TrainerAssignmentForm({
     [activeTrainerId, selectedTrainerId],
   )
 
-  const activeTrainers = trainersMockData.filter((t) => t.status === 'ACTIVE')
+  const activeTrainers = trainers.filter((t) => t.status === 'ACTIVE')
   const mode = activeTrainerId ? 'change' : 'assign'
 
   return (

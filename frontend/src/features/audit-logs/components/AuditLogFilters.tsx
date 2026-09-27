@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { usersMockData } from '@/features/users/data/users.mock'
+import { useUsers } from '@/features/users/hooks/useUsers'
 import type { AuditAction, AuditEntityType, AuditStatus, DateFilter } from '../types/audit-log.types'
 import {
   AUDIT_ACTION_LABELS,
@@ -56,6 +56,7 @@ export function AuditLogFilters({
   onFromDateChange,
   onToDateChange,
 }: AuditLogFiltersProps) {
+  const { users } = useUsers()
   const customRangeError =
     dateFilter === 'CUSTOM' && fromDate && toDate && fromDate > toDate
       ? 'From date must be on or before To date'
@@ -132,7 +133,7 @@ export function AuditLogFilters({
           aria-label="Filter by user"
         >
           <option value="ALL">All Users</option>
-          {usersMockData.map((u) => (
+          {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.firstName} {u.lastName}
             </option>

@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { usersMockData } from '@/features/users/data/users.mock'
-import { auditLogsMockData } from './data/audit-logs.mock'
+import { useUsers } from '@/features/users/hooks/useUsers'
+import { useAuditLogs } from './hooks/useAuditLogs'
 import { AuditLogFilters } from './components/AuditLogFilters'
 import { AuditLogSummary } from './components/AuditLogSummary'
 import { AuditLogTable } from './components/AuditLogTable'
@@ -11,9 +11,10 @@ import { matchesDateFilter } from './utils/audit-log.utils'
 
 const PAGE_SIZE = 10
 
-const usersById = Object.fromEntries(usersMockData.map((u) => [u.id, u]))
-
 export function AuditLogsPage() {
+  const { logs: auditLogs } = useAuditLogs()
+  const { users } = useUsers()
+  const usersById = Object.fromEntries(users.map((u) => [u.id, u]))
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState<AuditAction | 'ALL'>('ALL')
   const [entityFilter, setEntityFilter] = useState<AuditEntityType | 'ALL'>('ALL')
@@ -29,7 +30,7 @@ export function AuditLogsPage() {
 
   const filteredLogs = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return auditLogsMockData.filter((log) => {
+    return auditLogs.filter((log) => {
       if (actionFilter !== 'ALL' && log.action !== actionFilter) return false
       if (entityFilter !== 'ALL' && log.entityType !== entityFilter) return false
       if (statusFilter !== 'ALL' && log.status !== statusFilter) return false
@@ -55,7 +56,7 @@ export function AuditLogsPage() {
       }
       return true
     })
-  }, [search, actionFilter, entityFilter, statusFilter, userFilter, dateFilter, fromDate, toDate, customRangeInvalid])
+  }, [auditLogs, usersById, search, actionFilter, entityFilter, statusFilter, userFilter, dateFilter, fromDate, toDate, customRangeInvalid])
 
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE))
   const pagedLogs = filteredLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)

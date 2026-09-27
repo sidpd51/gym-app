@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { membershipPlansMockData } from '../../membership-plans/data/membership-plans.mock'
+import { useMembershipPlans } from '../../membership-plans/hooks/useMembershipPlans'
 import { createMembershipSchema, type CreateMembershipFormValues } from '../schemas/membership.schema'
 import { MembershipSummary } from './MembershipSummary'
 
@@ -82,8 +82,6 @@ function Field({ label, required, error, children, htmlFor }: FieldProps) {
   )
 }
 
-const activePlans = membershipPlansMockData.filter((p) => p.status === 'ACTIVE')
-
 interface MembershipFormProps {
   memberId: string
   onCancel: () => void
@@ -91,6 +89,8 @@ interface MembershipFormProps {
 
 export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
   const [submitted, setSubmitted] = useState(false)
+  const { plans } = useMembershipPlans()
+  const activePlans = plans.filter((p) => p.status === 'ACTIVE')
 
   const {
     register,

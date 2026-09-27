@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
 import type { MemberStatus, MembershipPlan } from './types/member.types'
-import { membersMockData } from './data/members.mock'
+import { useMembers } from './hooks/useMembers'
 import { MemberFilters } from './components/MemberFilters'
 import { MembersPagination } from './components/MembersPagination'
 import { MemberTable } from './components/MemberTable'
@@ -17,15 +17,17 @@ export function MembersPage() {
   const [trainerFilter, setTrainerFilter] = useState<string>('ALL')
   const [page, setPage] = useState(1)
 
+  const { members } = useMembers()
+
   const trainers = useMemo(
-    () => [...new Set(membersMockData.map((m) => m.trainerName).filter(Boolean) as string[])].sort(),
-    []
+    () => [...new Set(members.map((m) => m.trainerName).filter(Boolean) as string[])].sort(),
+    [members]
   )
 
   const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase()
 
-    return membersMockData.filter((m) => {
+    return members.filter((m) => {
       if (statusFilter !== 'ALL' && m.status !== statusFilter) return false
       if (planFilter !== 'ALL' && m.membershipPlan !== planFilter) return false
       if (trainerFilter !== 'ALL' && m.trainerName !== trainerFilter) return false
@@ -41,7 +43,7 @@ export function MembersPage() {
       }
       return true
     })
-  }, [search, statusFilter, planFilter, trainerFilter])
+  }, [search, statusFilter, planFilter, trainerFilter, members])
 
   const totalPages = Math.max(1, Math.ceil(filteredMembers.length / PAGE_SIZE))
   const pagedMembers = filteredMembers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -72,7 +74,7 @@ export function MembersPage() {
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">Members</h2>
           <p className="mt-0.5 text-sm text-zinc-500">
-            {membersMockData.length} total members
+            {members.length} total members
           </p>
         </div>
         <PermissionGate permission="members:create">

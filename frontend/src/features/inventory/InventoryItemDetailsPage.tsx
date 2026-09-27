@@ -1,7 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { inventoryCategoriesMockData } from './data/inventory-categories.mock'
-import { inventoryMockData } from './data/inventory.mock'
+import { useInventoryItem, useInventoryCategories } from './hooks/useInventory'
 import { InventoryStatusBadge } from './components/InventoryStatusBadge'
 import { InventoryTransactionHistory } from './components/InventoryTransactionHistory'
 import { getInventoryStatus } from './utils/inventory.utils'
@@ -31,7 +30,8 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 export function InventoryItemDetailsPage() {
   const { itemId } = useParams<{ itemId: string }>()
-  const item = inventoryMockData.find((i) => i.id === itemId)
+  const { item } = useInventoryItem(itemId)
+  const { categories } = useInventoryCategories()
 
   if (!item) {
     return (
@@ -53,7 +53,7 @@ export function InventoryItemDetailsPage() {
     )
   }
 
-  const category = inventoryCategoriesMockData.find((c) => c.id === item.categoryId)
+  const category = categories.find((c) => c.id === item.categoryId)
   const derivedStatus = getInventoryStatus(item.currentStock, item.minimumStock)
 
   return (

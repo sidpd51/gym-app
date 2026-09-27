@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { equipmentMockData } from './data/equipment.mock'
+import { useEquipmentItem } from './hooks/useEquipment'
 import { MaintenanceForm } from './components/MaintenanceForm'
 
 export function AddMaintenancePage() {
   const { equipmentId } = useParams<{ equipmentId: string }>()
   const navigate = useNavigate()
 
-  const equipment = equipmentMockData.find((e) => e.id === equipmentId)
+  const { item: equipment } = useEquipmentItem(equipmentId)
 
   if (!equipment) {
     return (

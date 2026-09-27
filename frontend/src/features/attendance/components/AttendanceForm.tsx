@@ -4,9 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { membersMockData } from '../../members/data/members.mock'
-import { membershipsMockData } from '../../memberships/data/memberships.mock'
-import { attendanceMockData } from '../data/attendance.mock'
+import { useMembers } from '../../members/hooks/useMembers'
+import { useMemberships } from '../../memberships/hooks/useMemberships'
+import { useAttendance } from '../hooks/useAttendance'
 import { markAttendanceSchema, type MarkAttendanceFormValues } from '../schemas/attendance.schema'
 
 function getTodayString(): string {
@@ -39,6 +39,10 @@ interface AttendanceFormProps {
 }
 
 export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
+  const { members } = useMembers()
+  const { memberships } = useMemberships()
+  const { attendance } = useAttendance()
+
   const {
     register,
     handleSubmit,
@@ -59,7 +63,7 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
   const businessRuleError = useMemo(() => {
     if (!memberId || !attendanceDate) return null
 
-    const hasValidMembership = membershipsMockData.some(
+    const hasValidMembership = memberships.some(
       (ms) =>
         ms.memberId === memberId &&
         ms.startDate <= attendanceDate &&
@@ -69,7 +73,7 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
       return 'This member does not have an active membership for this date.'
     }
 
-    const alreadyMarked = attendanceMockData.some(
+    const alreadyMarked = attendance.some(
       (a) => a.memberId === memberId && a.attendanceDate === attendanceDate,
     )
     if (alreadyMarked) {
@@ -77,7 +81,7 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
     }
 
     return null
-  }, [memberId, attendanceDate])
+  }, [memberId, attendanceDate, memberships, attendance])
 
   if (submitted) {
     return (
@@ -115,7 +119,7 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
         </label>
         <select {...register('memberId')} className={inputCls(!!errors.memberId)}>
           <option value="">Select a member…</option>
-          {membersMockData.map((m) => (
+          {members.map((m) => (
             <option key={m.id} value={m.id}>
               {m.firstName} {m.lastName} ({m.memberCode})
             </option>

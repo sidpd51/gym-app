@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { membersMockData } from '@/features/members/data/members.mock'
+import { useMembers } from '@/features/members/hooks/useMembers'
 import type { DateRange } from '../types/reports.types'
 import { inRange, formatDisplayDate } from '../utils/report-filters'
 import { ReportStatCard } from './ReportStatCard'
@@ -18,15 +18,17 @@ interface Props {
 }
 
 export function MembersReport({ range }: Props) {
-  const total = membersMockData.length
-  const active = membersMockData.filter((m) => m.status === 'ACTIVE').length
-  const expired = membersMockData.filter((m) => m.status === 'EXPIRED').length
-  const suspended = membersMockData.filter((m) => m.status === 'SUSPENDED').length
-  const cancelled = membersMockData.filter((m) => m.status === 'CANCELLED').length
+  const { members } = useMembers()
+
+  const total = members.length
+  const active = members.filter((m) => m.status === 'ACTIVE').length
+  const expired = members.filter((m) => m.status === 'EXPIRED').length
+  const suspended = members.filter((m) => m.status === 'SUSPENDED').length
+  const cancelled = members.filter((m) => m.status === 'CANCELLED').length
 
   const newInPeriod = useMemo(
-    () => membersMockData.filter((m) => inRange(m.joiningDate, range)),
-    [range]
+    () => members.filter((m) => inRange(m.joiningDate, range)),
+    [members, range]
   )
 
   const statusData = [
@@ -39,7 +41,7 @@ export function MembersReport({ range }: Props) {
   // Members who joined in 2026, grouped by month — context chart, not range-filtered
   const joinByMonth = useMemo(() => {
     const map = new Map<string, number>()
-    membersMockData.forEach((m) => {
+    members.forEach((m) => {
       if (!m.joiningDate.startsWith('2026')) return
       const key = m.joiningDate.slice(0, 7)
       map.set(key, (map.get(key) ?? 0) + 1)
@@ -53,7 +55,7 @@ export function MembersReport({ range }: Props) {
           count,
         }
       })
-  }, [])
+  }, [members])
 
   return (
     <div className="space-y-5">

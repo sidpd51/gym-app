@@ -4,14 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { membershipPlansMockData } from '../../membership-plans/data/membership-plans.mock'
+import { useMembershipPlans } from '../../membership-plans/hooks/useMembershipPlans'
 import { leadSchema, type LeadFormValues } from '../schemas/lead.schema'
 import { LEAD_SOURCE_LABELS } from '../types/lead.types'
 import type { LeadSource } from '../types/lead.types'
 
 const SOURCE_OPTIONS = Object.entries(LEAD_SOURCE_LABELS) as [LeadSource, string][]
-
-const activePlans = membershipPlansMockData.filter((p) => p.status === 'ACTIVE')
 
 function inputCls(hasError: boolean) {
   return cn(
@@ -67,6 +65,8 @@ interface LeadFormProps {
 }
 
 export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
+  const { plans } = useMembershipPlans()
+  const activePlans = plans.filter((p) => p.status === 'ACTIVE')
   const [submitted, setSubmitted] = useState(false)
 
   const {

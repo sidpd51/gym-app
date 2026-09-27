@@ -1,7 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { expenseCategoriesMockData } from './data/expense-categories.mock'
-import { expensesMockData } from './data/expenses.mock'
+import { useExpense, useExpenseCategories } from './hooks/useExpenses'
 import { EXPENSE_PAYMENT_METHOD_LABELS } from './types/expense.types'
 
 function formatLocalDate(dateStr: string): string {
@@ -29,7 +28,8 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 export function ExpenseDetailsPage() {
   const { expenseId } = useParams<{ expenseId: string }>()
-  const expense = expensesMockData.find((e) => e.id === expenseId)
+  const { expense } = useExpense(expenseId)
+  const { categories } = useExpenseCategories()
 
   if (!expense) {
     return (
@@ -51,7 +51,7 @@ export function ExpenseDetailsPage() {
     )
   }
 
-  const category = expenseCategoriesMockData.find((c) => c.id === expense.categoryId)
+  const category = categories.find((c) => c.id === expense.categoryId)
 
   return (
     <div className="space-y-5">

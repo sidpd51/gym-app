@@ -8,8 +8,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { paymentsMockData } from '@/features/payments/data/payments.mock'
-import { membersMockData } from '@/features/members/data/members.mock'
+import { usePayments } from '@/features/payments/hooks/usePayments'
+import { useMembers } from '@/features/members/hooks/useMembers'
 import { PAYMENT_METHOD_LABELS } from '@/features/payments/types/payment.types'
 import type { PaymentMethod } from '@/features/payments/types/payment.types'
 import type { DateRange } from '../types/reports.types'
@@ -21,14 +21,17 @@ interface Props {
 }
 
 export function RevenueReport({ range }: Props) {
+  const { payments } = usePayments()
+  const { members } = useMembers()
+
   const filteredCompleted = useMemo(
-    () => paymentsMockData.filter((p) => p.status === 'COMPLETED' && inRange(p.paymentDate, range)),
-    [range]
+    () => payments.filter((p) => p.status === 'COMPLETED' && inRange(p.paymentDate, range)),
+    [payments, range]
   )
 
   const allInRange = useMemo(
-    () => paymentsMockData.filter((p) => inRange(p.paymentDate, range)),
-    [range]
+    () => payments.filter((p) => inRange(p.paymentDate, range)),
+    [payments, range]
   )
 
   const totalRevenue = filteredCompleted.reduce((sum, p) => sum + p.amount, 0)
@@ -74,9 +77,9 @@ export function RevenueReport({ range }: Props) {
 
   const memberMap = useMemo(() => {
     const map = new Map<string, string>()
-    membersMockData.forEach((m) => map.set(m.id, `${m.firstName} ${m.lastName}`))
+    members.forEach((m) => map.set(m.id, `${m.firstName} ${m.lastName}`))
     return map
-  }, [])
+  }, [members])
 
   return (
     <div className="space-y-5">

@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { membersMockData } from '../../members/data/members.mock'
-import { membershipsMockData } from '../../memberships/data/memberships.mock'
+import { useMembers } from '../../members/hooks/useMembers'
+import { useMemberships } from '../../memberships/hooks/useMemberships'
 import { recordPaymentSchema, type RecordPaymentFormValues } from '../schemas/payment.schema'
 import { PAYMENT_METHOD_LABELS } from '../types/payment.types'
 import type { PaymentMethod } from '../types/payment.types'
@@ -121,11 +121,14 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
 
   const memberId = watch('memberId')
 
+  const { members } = useMembers()
+  const { memberships } = useMemberships()
+
   useEffect(() => {
     setValue('membershipId', '')
   }, [memberId, setValue])
 
-  const memberMemberships = membershipsMockData.filter((ms) => ms.memberId === memberId)
+  const memberMemberships = memberships.filter((ms) => ms.memberId === memberId)
 
   function onSubmit(data: RecordPaymentFormValues) {
     console.log('[RecordPayment] values:', {
@@ -175,7 +178,7 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
             <Field label="Member" required htmlFor="memberId" error={errors.memberId?.message}>
               <select id="memberId" className={selectCls(!!errors.memberId)} {...register('memberId')}>
                 <option value="">Select a member</option>
-                {membersMockData.map((m) => (
+                {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.firstName} {m.lastName} — {m.memberCode}
                   </option>

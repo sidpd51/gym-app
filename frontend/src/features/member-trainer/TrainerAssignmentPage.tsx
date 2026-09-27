@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { membersMockData } from '../members/data/members.mock'
-import { trainersMockData } from '../trainers/data/trainers.mock'
-import { memberTrainerAssignmentsMockData } from './data/member-trainer-assignments.mock'
+import { useMember } from '../members/hooks/useMembers'
+import { useTrainers } from '../trainers/hooks/useTrainers'
+import { useMemberTrainer } from './hooks/useMemberTrainer'
 import { TrainerAssignmentForm } from './components/TrainerAssignmentForm'
 import { TrainerAvatar } from '../trainers/components/TrainerAvatar'
 import type { MemberTrainerAssignment, AssignmentStatus } from './types/member-trainer.types'
@@ -22,10 +22,12 @@ export function TrainerAssignmentPage() {
   const { memberId } = useParams<{ memberId: string }>()
   const navigate = useNavigate()
 
-  const member = membersMockData.find((m) => m.id === memberId)
+  const { member } = useMember(memberId)
+  const { trainers } = useTrainers()
+  const { assignments: initialAssignments } = useMemberTrainer(memberId)
 
   const [assignments, setAssignments] = useState<MemberTrainerAssignment[]>(
-    () => memberTrainerAssignmentsMockData.filter((a) => a.memberId === memberId),
+    () => initialAssignments,
   )
 
   const [submittedData, setSubmittedData] = useState<{
@@ -55,7 +57,7 @@ export function TrainerAssignmentPage() {
 
   const activeAssignment = assignments.find((a) => a.status === 'ACTIVE')
   const activeTrainer = activeAssignment
-    ? (trainersMockData.find((t) => t.id === activeAssignment.trainerId) ?? null)
+    ? (trainers.find((t) => t.id === activeAssignment.trainerId) ?? null)
     : null
 
   function handleSubmit(data: AssignTrainerFormValues) {
@@ -85,7 +87,7 @@ export function TrainerAssignmentPage() {
 
   // Success state
   if (submittedData) {
-    const newTrainer = trainersMockData.find((t) => t.id === submittedData.trainerId)
+    const newTrainer = trainers.find((t) => t.id === submittedData.trainerId)
     return (
       <div className="space-y-5">
         <Link

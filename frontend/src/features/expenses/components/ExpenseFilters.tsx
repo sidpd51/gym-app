@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { expenseCategoriesMockData } from '../data/expense-categories.mock'
+import { useExpenseCategories } from '../hooks/useExpenses'
 import { EXPENSE_PAYMENT_METHOD_LABELS } from '../types/expense.types'
 import type { ExpensePaymentMethod } from '../types/expense.types'
 
@@ -41,6 +41,7 @@ export function ExpenseFilters({
   onMethodChange,
   onDateChange,
 }: ExpenseFiltersProps) {
+  const { categories } = useExpenseCategories()
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="relative flex-1">
@@ -66,7 +67,7 @@ export function ExpenseFilters({
           aria-label="Filter by category"
         >
           <option value="ALL">All Categories</option>
-          {expenseCategoriesMockData.map((c) => (
+          {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>

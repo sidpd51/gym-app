@@ -1,20 +1,21 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { leadsMockData } from './data/leads.mock'
+import { useLeads } from './hooks/useLeads'
 import { LeadFilters } from './components/LeadFilters'
 import { LeadTable } from './components/LeadTable'
 import type { LeadSource, LeadStatus } from './types/lead.types'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 export function LeadsPage() {
+  const { leads } = useLeads()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL')
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
 
   const filteredLeads = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return leadsMockData.filter((l) => {
+    return leads.filter((l) => {
       if (statusFilter !== 'ALL' && l.status !== statusFilter) return false
       if (sourceFilter !== 'ALL' && l.source !== sourceFilter) return false
       if (q) {
@@ -28,7 +29,7 @@ export function LeadsPage() {
       }
       return true
     })
-  }, [search, statusFilter, sourceFilter])
+  }, [leads, search, statusFilter, sourceFilter])
 
   function handleSearchChange(value: string) {
     setSearch(value)

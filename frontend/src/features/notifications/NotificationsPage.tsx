@@ -4,7 +4,7 @@ import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import { cn } from '@/lib/utils'
 import type { NotificationRecord, NotificationTab } from './types/notification.types'
 import { NOTIFICATION_TABS } from './types/notification.types'
-import { notificationsMockData } from './data/notifications.mock'
+import { useNotifications } from './hooks/useNotifications'
 import { NotificationSummary } from './components/NotificationSummary'
 import { ExpiringMemberships } from './components/ExpiringMemberships'
 import { ExpiredMemberships } from './components/ExpiredMemberships'
@@ -13,7 +13,8 @@ import { CreateReminderDialog } from './components/CreateReminderDialog'
 
 export function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<NotificationTab>('expiring')
-  const [records, setRecords] = useState<NotificationRecord[]>(notificationsMockData)
+  const { notifications } = useNotifications()
+  const [records, setRecords] = useState<NotificationRecord[]>(notifications)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogDefaultMemberId, setDialogDefaultMemberId] = useState('')

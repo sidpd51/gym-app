@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { membershipsMockData } from '@/features/memberships/data/memberships.mock'
+import { useMemberships } from '@/features/memberships/hooks/useMemberships'
 import type { DateRange } from '../types/reports.types'
 import { inRange, formatDisplayDate, fmtCurrency } from '../utils/report-filters'
 import { ReportStatCard } from './ReportStatCard'
@@ -18,26 +18,28 @@ interface Props {
 }
 
 export function MembershipsReport({ range }: Props) {
-  const active = membershipsMockData.filter((m) => m.status === 'ACTIVE').length
-  const expired = membershipsMockData.filter((m) => m.status === 'EXPIRED').length
-  const cancelled = membershipsMockData.filter((m) => m.status === 'CANCELLED').length
+  const { memberships } = useMemberships()
+
+  const active = memberships.filter((m) => m.status === 'ACTIVE').length
+  const expired = memberships.filter((m) => m.status === 'EXPIRED').length
+  const cancelled = memberships.filter((m) => m.status === 'CANCELLED').length
 
   const newInPeriod = useMemo(
-    () => membershipsMockData.filter((m) => inRange(m.startDate, range)),
-    [range]
+    () => memberships.filter((m) => inRange(m.startDate, range)),
+    [memberships, range]
   )
 
   const revenueInPeriod = newInPeriod.reduce((sum, m) => sum + m.amount, 0)
 
   const planData = useMemo(() => {
     const map = new Map<string, number>()
-    membershipsMockData.forEach((m) => {
+    memberships.forEach((m) => {
       map.set(m.planName, (map.get(m.planName) ?? 0) + 1)
     })
     return Array.from(map.entries())
       .sort(([, a], [, b]) => b - a)
       .map(([plan, count]) => ({ plan, count }))
-  }, [])
+  }, [memberships])
 
   return (
     <div className="space-y-5">

@@ -1,9 +1,9 @@
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { membersMockData } from '../members/data/members.mock'
-import { membershipsMockData } from '../memberships/data/memberships.mock'
+import { useMembers } from '../members/hooks/useMembers'
+import { useMemberships } from '../memberships/hooks/useMemberships'
 import { PaymentStatusBadge } from './components/PaymentStatusBadge'
-import { paymentsMockData } from './data/payments.mock'
+import { usePayment } from './hooks/usePayments'
 import { PAYMENT_METHOD_LABELS } from './types/payment.types'
 
 function formatLocalDate(dateStr: string): string {
@@ -26,7 +26,9 @@ function DetailSection({ label, children }: { label: string; children: React.Rea
 
 export function PaymentDetailsPage() {
   const { paymentId } = useParams<{ paymentId: string }>()
-  const payment = paymentsMockData.find((p) => p.id === paymentId)
+  const { payment } = usePayment(paymentId)
+  const { members } = useMembers()
+  const { memberships } = useMemberships()
 
   if (!payment) {
     return (
@@ -48,9 +50,9 @@ export function PaymentDetailsPage() {
     )
   }
 
-  const member = membersMockData.find((m) => m.id === payment.memberId)
+  const member = members.find((m) => m.id === payment.memberId)
   const membership = payment.membershipId
-    ? membershipsMockData.find((ms) => ms.id === payment.membershipId)
+    ? memberships.find((ms) => ms.id === payment.membershipId)
     : null
 
   return (

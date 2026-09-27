@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { SETTINGS_SECTIONS } from './types/settings.types'
 import type { GymSettings, SettingsSection } from './types/settings.types'
-import { defaultSettings } from './data/settings.mock'
+import { useSettings } from './hooks/useSettings'
 import { SettingsSidebar } from './components/SettingsSidebar'
 import { GymProfileSettings } from './components/GymProfileSettings'
 import { MembershipSettings } from './components/MembershipSettings'
@@ -9,8 +9,9 @@ import { AttendanceSettings } from './components/AttendanceSettings'
 import { PreferenceSettings } from './components/PreferenceSettings'
 
 export function SettingsPage() {
+  const { settings } = useSettings()
   const [activeSection, setActiveSection] = useState<SettingsSection>('gym-profile')
-  const [settingsSource, setSettingsSource] = useState<GymSettings>(defaultSettings)
+  const [settingsSource, setSettingsSource] = useState<GymSettings>(settings)
 
   function handleSave(updated: GymSettings) {
     setSettingsSource(updated)

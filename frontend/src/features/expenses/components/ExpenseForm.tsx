@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { expenseCategoriesMockData } from '../data/expense-categories.mock'
+import { useExpenseCategories } from '../hooks/useExpenses'
 import { expenseSchema, type ExpenseFormValues } from '../schemas/expense.schema'
 import { EXPENSE_PAYMENT_METHOD_LABELS } from '../types/expense.types'
 import type { ExpensePaymentMethod } from '../types/expense.types'
@@ -17,7 +17,6 @@ function getTodayString(): string {
   return `${y}-${mo}-${day}`
 }
 
-const activeCategories = expenseCategoriesMockData.filter((c) => c.status === 'ACTIVE')
 const paymentMethodOptions = Object.entries(EXPENSE_PAYMENT_METHOD_LABELS) as [
   ExpensePaymentMethod,
   string,
@@ -77,6 +76,8 @@ interface ExpenseFormProps {
 }
 
 export function ExpenseForm({ mode, defaultValues, onCancel }: ExpenseFormProps) {
+  const { categories } = useExpenseCategories()
+  const activeCategories = categories.filter((c) => c.status === 'ACTIVE')
   const [submitted, setSubmitted] = useState(false)
 
   const {

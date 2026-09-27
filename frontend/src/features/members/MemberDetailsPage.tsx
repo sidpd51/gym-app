@@ -1,7 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { memberSupplementalData } from './data/member-details.mock'
-import { membersMockData } from './data/members.mock'
+import { useMember } from './hooks/useMembers'
 import { ContactInformation } from './components/ContactInformation'
 import { CurrentMembershipCard } from './components/CurrentMembershipCard'
 import { MemberAttendanceSummary } from './components/MemberAttendanceSummary'
@@ -16,7 +15,7 @@ import { MemberReminderHistory } from '../notifications/components/MemberReminde
 export function MemberDetailsPage() {
   const { memberId } = useParams<{ memberId: string }>()
 
-  const member = membersMockData.find((m) => m.id === memberId)
+  const { member, supplementalData } = useMember(memberId)
 
   if (!member) {
     return (
@@ -38,8 +37,8 @@ export function MemberDetailsPage() {
     )
   }
 
-  const supplemental = memberSupplementalData[member.id]
-  const currentMembership = supplemental.membershipHistory[0]
+  const supplemental = supplementalData!
+  const currentMembership = supplemental?.membershipHistory[0]
 
   return (
     <div className="space-y-5">

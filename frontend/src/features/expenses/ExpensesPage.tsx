@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { expenseCategoriesMockData } from './data/expense-categories.mock'
-import { expensesMockData } from './data/expenses.mock'
+import { useExpenses, useExpenseCategories } from './hooks/useExpenses'
 import { ExpenseFilters } from './components/ExpenseFilters'
 import { ExpenseTable } from './components/ExpenseTable'
 import type { DateFilter } from './components/ExpenseFilters'
@@ -34,9 +33,13 @@ function matchesDateFilter(dateStr: string, filter: DateFilter): boolean {
   return true
 }
 
-const categoriesById = Object.fromEntries(expenseCategoriesMockData.map((c) => [c.id, c]))
-
 export function ExpensesPage() {
+  const { expenses } = useExpenses()
+  const { categories } = useExpenseCategories()
+  const categoriesById = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c])),
+    [categories]
+  )
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [methodFilter, setMethodFilter] = useState<ExpensePaymentMethod | 'ALL'>('ALL')
@@ -44,7 +47,7 @@ export function ExpensesPage() {
 
   const filteredExpenses = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return expensesMockData.filter((e) => {
+    return expenses.filter((e) => {
       if (categoryFilter !== 'ALL' && e.categoryId !== categoryFilter) return false
       if (methodFilter !== 'ALL' && e.paymentMethod !== methodFilter) return false
       if (!matchesDateFilter(e.expenseDate, dateFilter)) return false
@@ -64,7 +67,7 @@ export function ExpensesPage() {
       }
       return true
     })
-  }, [search, categoryFilter, methodFilter, dateFilter])
+  }, [expenses, categoriesById, search, categoryFilter, methodFilter, dateFilter])
 
   return (
     <div className="space-y-5">

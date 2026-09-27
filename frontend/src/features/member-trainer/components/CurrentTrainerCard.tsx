@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { memberTrainerAssignmentsMockData } from '../data/member-trainer-assignments.mock'
-import { trainersMockData } from '../../trainers/data/trainers.mock'
+import { useMemberTrainer } from '../hooks/useMemberTrainer'
+import { useTrainers } from '../../trainers/hooks/useTrainers'
 import { TrainerAvatar } from '../../trainers/components/TrainerAvatar'
 
 function formatLocalDate(dateStr: string): string {
@@ -17,11 +17,10 @@ interface CurrentTrainerCardProps {
 }
 
 export function CurrentTrainerCard({ memberId }: CurrentTrainerCardProps) {
-  const assignment = memberTrainerAssignmentsMockData.find(
-    (a) => a.memberId === memberId && a.status === 'ACTIVE',
-  )
+  const { currentAssignment: assignment } = useMemberTrainer(memberId)
+  const { trainers } = useTrainers()
   const trainer = assignment
-    ? (trainersMockData.find((t) => t.id === assignment.trainerId) ?? null)
+    ? (trainers.find((t) => t.id === assignment.trainerId) ?? null)
     : null
 
   return (

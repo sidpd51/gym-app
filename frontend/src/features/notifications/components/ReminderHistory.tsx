@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { NotificationRecord } from '../types/notification.types'
-import { notificationsMockData } from '../data/notifications.mock'
+import { useNotifications } from '../hooks/useNotifications'
 import { getMemberName } from '../utils/expiry.utils'
 import {
   CHANNEL_LABELS,
@@ -18,7 +18,9 @@ interface ReminderHistoryProps {
   records?: NotificationRecord[]
 }
 
-export function ReminderHistory({ records = notificationsMockData }: ReminderHistoryProps) {
+export function ReminderHistory({ records: recordsProp }: ReminderHistoryProps) {
+  const { notifications } = useNotifications()
+  const records = recordsProp ?? notifications
   const [expanded, setExpanded] = useState<string | null>(null)
 
   if (records.length === 0) {

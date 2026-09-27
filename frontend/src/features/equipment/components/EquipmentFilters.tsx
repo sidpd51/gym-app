@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { equipmentCategoriesMockData } from '../data/equipment-categories.mock'
+import { useEquipmentCategories } from '../hooks/useEquipment'
 import type { EquipmentStatus } from '../types/equipment.types'
 
 const STATUS_OPTIONS: { value: EquipmentStatus | 'ALL'; label: string }[] = [
@@ -27,6 +27,7 @@ export function EquipmentFilters({
   onCategoryChange,
   onStatusChange,
 }: EquipmentFiltersProps) {
+  const { categories } = useEquipmentCategories()
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="relative flex-1">
@@ -52,7 +53,7 @@ export function EquipmentFilters({
           aria-label="Filter by category"
         >
           <option value="ALL">All Categories</option>
-          {equipmentCategoriesMockData
+          {categories
             .filter((c) => c.status === 'ACTIVE')
             .map((c) => (
               <option key={c.id} value={c.id}>

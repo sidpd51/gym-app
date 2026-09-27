@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { membershipPlansMockData } from '../membership-plans/data/membership-plans.mock'
-import { membersMockData } from '../members/data/members.mock'
+import { useMembershipPlans } from '../membership-plans/hooks/useMembershipPlans'
+import { useMembers } from '../members/hooks/useMembers'
 import { MembershipFilters } from './components/MembershipFilters'
 import { MembershipPagination } from './components/MembershipPagination'
 import { MembershipTable } from './components/MembershipTable'
-import { membershipsMockData } from './data/memberships.mock'
+import { useMemberships } from './hooks/useMemberships'
 import type { MembershipStatus } from './types/membership.types'
 
 const PAGE_SIZE = 10
@@ -15,22 +15,26 @@ export function MembershipsPage() {
   const [planFilter, setPlanFilter] = useState('ALL')
   const [page, setPage] = useState(1)
 
+  const { members } = useMembers()
+  const { plans } = useMembershipPlans()
+  const { memberships } = useMemberships()
+
   const membersById = useMemo(
-    () => Object.fromEntries(membersMockData.map((m) => [m.id, m])),
-    []
+    () => Object.fromEntries(members.map((m) => [m.id, m])),
+    [members]
   )
 
   const planOptions = useMemo(() => {
-    const ids = new Set(membershipsMockData.map((m) => m.planId))
-    return membershipPlansMockData
+    const ids = new Set(memberships.map((m) => m.planId))
+    return plans
       .filter((p) => ids.has(p.id))
       .map((p) => ({ id: p.id, name: p.name }))
-  }, [])
+  }, [memberships, plans])
 
   const filteredMemberships = useMemo(() => {
     const q = search.trim().toLowerCase()
 
-    return membershipsMockData.filter((m) => {
+    return memberships.filter((m) => {
       if (statusFilter !== 'ALL' && m.status !== statusFilter) return false
       if (planFilter !== 'ALL' && m.planId !== planFilter) return false
       if (q) {
@@ -46,7 +50,7 @@ export function MembershipsPage() {
       }
       return true
     })
-  }, [search, statusFilter, planFilter, membersById])
+  }, [search, statusFilter, planFilter, membersById, memberships])
 
   const totalPages = Math.max(1, Math.ceil(filteredMemberships.length / PAGE_SIZE))
   const pagedMemberships = filteredMemberships.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -66,7 +70,7 @@ export function MembershipsPage() {
     setPage(1)
   }
 
-  if (membershipsMockData.length === 0) {
+  if (memberships.length === 0) {
     return (
       <div className="space-y-5">
         <div>
@@ -88,7 +92,7 @@ export function MembershipsPage() {
       <div>
         <h2 className="text-xl font-semibold text-zinc-900">Memberships</h2>
         <p className="mt-0.5 text-sm text-zinc-500">
-          {membershipsMockData.length} total memberships
+          {memberships.length} total memberships
         </p>
       </div>
 

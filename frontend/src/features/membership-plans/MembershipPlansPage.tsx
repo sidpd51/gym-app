@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import type { MembershipPlanStatus } from './types/membership-plan.types'
-import { membershipPlansMockData } from './data/membership-plans.mock'
+import { useMembershipPlans } from './hooks/useMembershipPlans'
 import { MembershipPlanFilters } from './components/MembershipPlanFilters'
 import { MembershipPlanTable } from './components/MembershipPlanTable'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
@@ -14,8 +14,10 @@ export function MembershipPlansPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [statusOverrides, setStatusOverrides] = useState<Record<string, MembershipPlanStatus>>({})
 
+  const { plans } = useMembershipPlans()
+
   function effectiveStatus(planId: string): MembershipPlanStatus {
-    return statusOverrides[planId] ?? membershipPlansMockData.find((p) => p.id === planId)!.status
+    return statusOverrides[planId] ?? plans.find((p) => p.id === planId)!.status
   }
 
   function handleToggleStatus(planId: string, current: MembershipPlanStatus) {
@@ -35,7 +37,7 @@ export function MembershipPlansPage() {
 
   const filteredPlans = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return membershipPlansMockData.filter((plan) => {
+    return plans.filter((plan) => {
       const status = statusOverrides[plan.id] ?? plan.status
       if (statusFilter !== 'ALL' && status !== statusFilter) return false
       if (q) {
@@ -44,7 +46,7 @@ export function MembershipPlansPage() {
       }
       return true
     })
-  }, [search, statusFilter, statusOverrides])
+  }, [search, statusFilter, statusOverrides, plans])
 
   return (
     <div className="space-y-5">
@@ -78,7 +80,7 @@ export function MembershipPlansPage() {
           <h3 className="text-sm font-semibold text-zinc-900">
             All Plans
             <span className="ml-2 text-xs font-normal text-zinc-400">
-              {filteredPlans.length} of {membershipPlansMockData.length}
+              {filteredPlans.length} of {plans.length}
             </span>
           </h3>
         </div>

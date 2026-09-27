@@ -1,5 +1,5 @@
-import { memberTrainerAssignmentsMockData } from '../data/member-trainer-assignments.mock'
-import { trainersMockData } from '../../trainers/data/trainers.mock'
+import { useMemberTrainer } from '../hooks/useMemberTrainer'
+import { useTrainers } from '../../trainers/hooks/useTrainers'
 
 function formatLocalDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -15,7 +15,8 @@ interface TrainerAssignmentHistoryProps {
 }
 
 export function TrainerAssignmentHistory({ memberId }: TrainerAssignmentHistoryProps) {
-  const assignments = memberTrainerAssignmentsMockData.filter((a) => a.memberId === memberId)
+  const { assignments } = useMemberTrainer(memberId)
+  const { trainers } = useTrainers()
 
   if (assignments.length === 0) return null
 
@@ -44,7 +45,7 @@ export function TrainerAssignmentHistory({ memberId }: TrainerAssignmentHistoryP
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {assignments.map((a) => {
-              const trainer = trainersMockData.find((t) => t.id === a.trainerId)
+              const trainer = trainers.find((t) => t.id === a.trainerId)
               return (
                 <tr key={a.id} className="hover:bg-zinc-50">
                   <td className="px-5 py-3">

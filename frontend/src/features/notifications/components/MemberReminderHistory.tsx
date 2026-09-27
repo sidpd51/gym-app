@@ -1,4 +1,4 @@
-import { notificationsMockData } from '../data/notifications.mock'
+import { useMemberNotifications } from '../hooks/useNotifications'
 import { CHANNEL_LABELS, formatNotificationDate } from '../utils/notification.utils'
 import { NotificationStatusBadge } from './NotificationStatusBadge'
 
@@ -13,7 +13,7 @@ const TYPE_LABELS = {
 } as const
 
 export function MemberReminderHistory({ memberId }: MemberReminderHistoryProps) {
-  const records = notificationsMockData.filter((n) => n.memberId === memberId)
+  const { notifications: records } = useMemberNotifications(memberId)
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-white px-6 py-5">

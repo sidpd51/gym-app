@@ -3,8 +3,8 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { membersMockData } from '@/features/members/data/members.mock'
-import { membershipsMockData } from '@/features/memberships/data/memberships.mock'
+import { useMembers } from '@/features/members/hooks/useMembers'
+import { useMemberships } from '@/features/memberships/hooks/useMemberships'
 import type { NotificationRecord } from '../types/notification.types'
 import { createReminderSchema, type CreateReminderFormValues } from '../schemas/notification.schema'
 import { CHANNEL_LABELS } from '../utils/notification.utils'
@@ -54,10 +54,13 @@ export function CreateReminderDialog({
     },
   })
 
+  const { members } = useMembers()
+  const { memberships } = useMemberships()
+
   const selectedMemberId = watch('memberId')
   const selectedChannel = watch('channel')
 
-  const memberMemberships = membershipsMockData.filter(
+  const memberMemberships = memberships.filter(
     (ms) => ms.memberId === selectedMemberId && ms.status !== 'CANCELLED'
   )
 
@@ -148,7 +151,7 @@ export function CreateReminderDialog({
                       }}
                     >
                       <option value="">Select a member…</option>
-                      {membersMockData.map((m) => (
+                      {members.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.firstName} {m.lastName}
                         </option>

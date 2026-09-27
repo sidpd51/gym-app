@@ -8,8 +8,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { attendanceMockData } from '@/features/attendance/data/attendance.mock'
-import { membersMockData } from '@/features/members/data/members.mock'
+import { useAttendance } from '@/features/attendance/hooks/useAttendance'
+import { useMembers } from '@/features/members/hooks/useMembers'
 import type { DateRange } from '../types/reports.types'
 import { inRange, formatDisplayDate } from '../utils/report-filters'
 import { ReportStatCard } from './ReportStatCard'
@@ -19,9 +19,12 @@ interface Props {
 }
 
 export function AttendanceReport({ range }: Props) {
+  const { attendance } = useAttendance()
+  const { members } = useMembers()
+
   const filtered = useMemo(
-    () => attendanceMockData.filter((a) => inRange(a.attendanceDate, range)),
-    [range]
+    () => attendance.filter((a) => inRange(a.attendanceDate, range)),
+    [attendance, range]
   )
 
   const uniqueMembers = useMemo(
@@ -56,9 +59,9 @@ export function AttendanceReport({ range }: Props) {
 
   const memberMap = useMemo(() => {
     const map = new Map<string, string>()
-    membersMockData.forEach((m) => map.set(m.id, `${m.firstName} ${m.lastName}`))
+    members.forEach((m) => map.set(m.id, `${m.firstName} ${m.lastName}`))
     return map
-  }, [])
+  }, [members])
 
   return (
     <div className="space-y-5">

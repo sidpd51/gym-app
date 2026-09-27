@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { trainersMockData } from './data/trainers.mock'
+import { useTrainers } from './hooks/useTrainers'
 import { TrainerFilters } from './components/TrainerFilters'
 import { TrainerTable } from './components/TrainerTable'
 import type { TrainerStatus } from './types/trainer.types'
@@ -24,13 +24,15 @@ export function TrainersPage() {
   const [pendingToggle, setPendingToggle] = useState<PendingToggle | null>(null)
   const { showToast } = useToast()
 
+  const { trainers } = useTrainers()
+
   function effectiveStatus(trainerId: string): TrainerStatus {
-    return statusOverrides[trainerId] ?? (trainersMockData.find((t) => t.id === trainerId)?.status ?? 'INACTIVE')
+    return statusOverrides[trainerId] ?? (trainers.find((t) => t.id === trainerId)?.status ?? 'INACTIVE')
   }
 
   function handleToggleStatus(trainerId: string, current: TrainerStatus) {
     if (current === 'ACTIVE') {
-      const trainer = trainersMockData.find((t) => t.id === trainerId)
+      const trainer = trainers.find((t) => t.id === trainerId)
       const name = trainer ? `${trainer.firstName} ${trainer.lastName}` : 'this trainer'
       setPendingToggle({ trainerId, current, name })
     } else {
@@ -56,7 +58,7 @@ export function TrainersPage() {
 
   const filteredTrainers = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return trainersMockData.filter((t) => {
+    return trainers.filter((t) => {
       const status = statusOverrides[t.id] ?? t.status
       if (statusFilter !== 'ALL' && status !== statusFilter) return false
       if (q) {
@@ -75,7 +77,7 @@ export function TrainersPage() {
       }
       return true
     })
-  }, [search, statusFilter, statusOverrides])
+  }, [search, statusFilter, statusOverrides, trainers])
 
   return (
     <div className="space-y-5">

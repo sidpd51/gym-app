@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { trainersMockData } from './data/trainers.mock'
+import { useTrainer } from './hooks/useTrainers'
 import { TrainerAvatar } from './components/TrainerAvatar'
 import { TrainerStatusBadge } from './components/TrainerStatusBadge'
 import type { TrainerStatus } from './types/trainer.types'
@@ -31,7 +31,7 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 export function TrainerDetailsPage() {
   const { trainerId } = useParams<{ trainerId: string }>()
-  const trainer = trainersMockData.find((t) => t.id === trainerId)
+  const { trainer } = useTrainer(trainerId)
 
   const [statusOverride, setStatusOverride] = useState<TrainerStatus | null>(null)
   const effectiveStatus: TrainerStatus = statusOverride ?? trainer?.status ?? 'INACTIVE'

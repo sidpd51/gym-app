@@ -1,9 +1,7 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
-import { equipmentCategoriesMockData } from './data/equipment-categories.mock'
-import { equipmentMockData } from './data/equipment.mock'
-import { equipmentMaintenanceMockData } from './data/equipment-maintenance.mock'
+import { useEquipmentItem, useEquipmentCategories, useEquipmentMaintenance } from './hooks/useEquipment'
 import { EquipmentStatusBadge } from './components/EquipmentStatusBadge'
 import { EquipmentMaintenanceHistory } from './components/EquipmentMaintenanceHistory'
 
@@ -32,7 +30,9 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 export function EquipmentDetailsPage() {
   const { equipmentId } = useParams<{ equipmentId: string }>()
-  const equipment = equipmentMockData.find((e) => e.id === equipmentId)
+  const { item: equipment } = useEquipmentItem(equipmentId)
+  const { categories } = useEquipmentCategories()
+  const { maintenance: maintenanceRecordsRaw } = useEquipmentMaintenance(equipmentId)
 
   if (!equipment) {
     return (
@@ -54,10 +54,10 @@ export function EquipmentDetailsPage() {
     )
   }
 
-  const category = equipmentCategoriesMockData.find((c) => c.id === equipment.categoryId)
-  const maintenanceRecords = equipmentMaintenanceMockData
-    .filter((m) => m.equipmentId === equipment.id)
-    .sort((a, b) => (a.maintenanceDate < b.maintenanceDate ? 1 : -1))
+  const category = categories.find((c) => c.id === equipment.categoryId)
+  const maintenanceRecords = [...maintenanceRecordsRaw].sort((a, b) =>
+    a.maintenanceDate < b.maintenanceDate ? 1 : -1,
+  )
 
   const lastMaintenance = maintenanceRecords[0]
   const nextScheduled = maintenanceRecords.find((m) => m.nextMaintenanceDate)

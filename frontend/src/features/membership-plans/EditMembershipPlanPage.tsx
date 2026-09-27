@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { membershipPlansMockData } from './data/membership-plans.mock'
+import { useMembershipPlan } from './hooks/useMembershipPlans'
 import { MembershipPlanForm } from './components/MembershipPlanForm'
 
 export function EditMembershipPlanPage() {
   const { planId } = useParams<{ planId: string }>()
   const navigate = useNavigate()
 
-  const plan = membershipPlansMockData.find((p) => p.id === planId)
+  const { plan } = useMembershipPlan(planId)
 
   if (!plan) {
     return (

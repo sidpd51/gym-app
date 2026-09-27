@@ -1,5 +1,5 @@
 import { Activity, Clock, UserCheck, Users } from 'lucide-react'
-import { dashboardMockData } from './data/dashboard.mock'
+import { useDashboard } from './hooks/useDashboard'
 import { AttendanceSummary } from './components/AttendanceSummary'
 import { DashboardHeader } from './components/DashboardHeader'
 import { ExpiringMemberships } from './components/ExpiringMemberships'
@@ -9,6 +9,7 @@ import { RevenueChart } from './components/RevenueChart'
 import { StatCard } from './components/StatCard'
 
 export function DashboardPage() {
+  const { data } = useDashboard()
   const {
     stats,
     revenueData,
@@ -16,7 +17,7 @@ export function DashboardPage() {
     attendanceSnapshot,
     expiringMemberships,
     recentPayments,
-  } = dashboardMockData
+  } = data
 
   const activePct = ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1)
 

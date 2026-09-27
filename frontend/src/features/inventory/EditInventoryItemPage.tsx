@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { inventoryMockData } from './data/inventory.mock'
+import { useInventoryItem } from './hooks/useInventory'
 import { InventoryItemForm } from './components/InventoryItemForm'
 
 export function EditInventoryItemPage() {
   const { itemId } = useParams<{ itemId: string }>()
   const navigate = useNavigate()
 
-  const item = inventoryMockData.find((i) => i.id === itemId)
+  const { item } = useInventoryItem(itemId)
 
   if (!item) {
     return (

@@ -1,6 +1,6 @@
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { usersMockData } from '../data/users.mock'
+import { useUser } from '../hooks/useUsers'
 import { UserAvatar } from '../components/UserAvatar'
 import { UserRoleBadge } from '../components/UserRoleBadge'
 import { UserStatusBadge } from '../components/UserStatusBadge'
@@ -36,7 +36,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 export function UserDetailsPage() {
   const { userId } = useParams<{ userId: string }>()
-  const user = usersMockData.find((u) => u.id === userId)
+  const { user } = useUser(userId)
 
   if (!user) {
     return (

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { equipmentMaintenanceMockData } from '../data/equipment-maintenance.mock'
+import { useEquipmentMaintenance } from '../hooks/useEquipment'
 import { MAINTENANCE_TYPE_LABELS } from '../types/equipment.types'
 import type { MaintenanceType } from '../types/equipment.types'
 import { cn } from '@/lib/utils'
@@ -26,9 +26,10 @@ interface EquipmentMaintenanceHistoryProps {
 }
 
 export function EquipmentMaintenanceHistory({ equipmentId }: EquipmentMaintenanceHistoryProps) {
-  const records = equipmentMaintenanceMockData
-    .filter((m) => m.equipmentId === equipmentId)
-    .sort((a, b) => (a.maintenanceDate < b.maintenanceDate ? 1 : -1))
+  const { maintenance: maintenanceRaw } = useEquipmentMaintenance(equipmentId)
+  const records = [...maintenanceRaw].sort((a, b) =>
+    a.maintenanceDate < b.maintenanceDate ? 1 : -1,
+  )
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-white">

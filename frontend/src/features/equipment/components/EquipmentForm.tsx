@@ -4,12 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { equipmentCategoriesMockData } from '../data/equipment-categories.mock'
+import { useEquipmentCategories } from '../hooks/useEquipment'
 import { equipmentSchema, type EquipmentFormValues } from '../schemas/equipment.schema'
 import { EQUIPMENT_STATUS_LABELS } from '../types/equipment.types'
 import type { EquipmentStatus } from '../types/equipment.types'
 
-const activeCategories = equipmentCategoriesMockData.filter((c) => c.status === 'ACTIVE')
 const statusOptions = Object.entries(EQUIPMENT_STATUS_LABELS) as [EquipmentStatus, string][]
 
 function inputCls(hasError: boolean) {
@@ -66,6 +65,8 @@ interface EquipmentFormProps {
 }
 
 export function EquipmentForm({ mode, defaultValues, onCancel }: EquipmentFormProps) {
+  const { categories } = useEquipmentCategories()
+  const activeCategories = categories.filter((c) => c.status === 'ACTIVE')
   const [submitted, setSubmitted] = useState(false)
 
   const {

@@ -1,4 +1,4 @@
-import { inventoryTransactionsMockData } from '../data/inventory-transactions.mock'
+import { useInventoryTransactions } from '../hooks/useInventory'
 import { INVENTORY_TRANSACTION_TYPE_LABELS } from '../types/inventory.types'
 import type { InventoryTransactionType } from '../types/inventory.types'
 import { cn } from '@/lib/utils'
@@ -23,9 +23,10 @@ interface InventoryTransactionHistoryProps {
 }
 
 export function InventoryTransactionHistory({ itemId }: InventoryTransactionHistoryProps) {
-  const transactions = inventoryTransactionsMockData
-    .filter((t) => t.itemId === itemId)
-    .sort((a, b) => (a.transactionDate < b.transactionDate ? 1 : -1))
+  const { transactions: rawTransactions } = useInventoryTransactions(itemId)
+  const transactions = [...rawTransactions].sort((a, b) =>
+    a.transactionDate < b.transactionDate ? 1 : -1,
+  )
 
   if (transactions.length === 0) {
     return (

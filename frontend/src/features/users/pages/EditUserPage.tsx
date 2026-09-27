@@ -1,12 +1,12 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { usersMockData } from '../data/users.mock'
+import { useUser } from '../hooks/useUsers'
 import { UserForm } from '../components/UserForm'
 
 export function EditUserPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const user = usersMockData.find((u) => u.id === userId)
+  const { user } = useUser(userId)
 
   if (!user) {
     return (

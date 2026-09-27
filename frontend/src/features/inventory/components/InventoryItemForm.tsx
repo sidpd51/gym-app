@@ -4,10 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { inventoryCategoriesMockData } from '../data/inventory-categories.mock'
+import { useInventoryCategories } from '../hooks/useInventory'
 import { inventoryItemSchema, type InventoryItemFormValues } from '../schemas/inventory.schema'
-
-const activeCategories = inventoryCategoriesMockData.filter((c) => c.status === 'ACTIVE')
 
 const UNIT_SUGGESTIONS = ['pcs', 'kg', 'litre', 'box', 'pack', 'bottle', 'roll', 'set']
 
@@ -67,6 +65,8 @@ interface InventoryItemFormProps {
 }
 
 export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryItemFormProps) {
+  const { categories } = useInventoryCategories()
+  const activeCategories = categories.filter((c) => c.status === 'ACTIVE')
   const [submitted, setSubmitted] = useState(false)
 
   const {

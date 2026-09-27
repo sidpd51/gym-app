@@ -1,18 +1,18 @@
 import { Link } from 'react-router-dom'
-import { usersMockData } from '@/features/users/data/users.mock'
+import { useUsers } from '@/features/users/hooks/useUsers'
 import type { AuditLog } from '../types/audit-log.types'
 import { AUDIT_ENTITY_LABELS } from '../types/audit-log.types'
 import { formatAuditTimestamp } from '../utils/audit-log.utils'
 import { AuditActionBadge } from './AuditActionBadge'
 import { AuditStatusBadge } from './AuditStatusBadge'
 
-const usersById = Object.fromEntries(usersMockData.map((u) => [u.id, u]))
-
 interface AuditLogTableProps {
   logs: AuditLog[]
 }
 
 export function AuditLogTable({ logs }: AuditLogTableProps) {
+  const { users } = useUsers()
+  const usersById = Object.fromEntries(users.map((u) => [u.id, u]))
   if (logs.length === 0) {
     return (
       <div className="px-5 py-12 text-center">

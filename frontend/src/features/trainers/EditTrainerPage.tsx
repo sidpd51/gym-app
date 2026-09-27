@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { trainersMockData } from './data/trainers.mock'
+import { useTrainer } from './hooks/useTrainers'
 import { TrainerForm } from './components/TrainerForm'
 
 export function EditTrainerPage() {
   const { trainerId } = useParams<{ trainerId: string }>()
   const navigate = useNavigate()
 
-  const trainer = trainersMockData.find((t) => t.id === trainerId)
+  const { trainer } = useTrainer(trainerId)
 
   if (!trainer) {
     return (

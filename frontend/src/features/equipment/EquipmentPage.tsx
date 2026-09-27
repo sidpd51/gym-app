@@ -1,23 +1,23 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { equipmentCategoriesMockData } from './data/equipment-categories.mock'
-import { equipmentMockData } from './data/equipment.mock'
+import { useEquipment, useEquipmentCategories } from './hooks/useEquipment'
 import { EquipmentFilters } from './components/EquipmentFilters'
 import { EquipmentTable } from './components/EquipmentTable'
 import type { EquipmentStatus } from './types/equipment.types'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
-const categoriesById = Object.fromEntries(equipmentCategoriesMockData.map((c) => [c.id, c]))
-
 export function EquipmentPage() {
+  const { equipment } = useEquipment()
+  const { categories } = useEquipmentCategories()
+  const categoriesById = Object.fromEntries(categories.map((c) => [c.id, c]))
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | 'ALL'>('ALL')
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return equipmentMockData.filter((item) => {
+    return equipment.filter((item) => {
       if (categoryFilter !== 'ALL' && item.categoryId !== categoryFilter) return false
       if (statusFilter !== 'ALL' && item.status !== statusFilter) return false
 
@@ -40,7 +40,7 @@ export function EquipmentPage() {
 
       return true
     })
-  }, [search, categoryFilter, statusFilter])
+  }, [equipment, search, categoryFilter, statusFilter])
 
   return (
     <div className="space-y-5">

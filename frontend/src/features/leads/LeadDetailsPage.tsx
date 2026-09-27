@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { membershipPlansMockData } from '../membership-plans/data/membership-plans.mock'
-import { leadsMockData } from './data/leads.mock'
+import { useLead } from './hooks/useLeads'
+import { useMembershipPlan } from '../membership-plans/hooks/useMembershipPlans'
 import { LeadStatusBadge } from './components/LeadStatusBadge'
 import { LEAD_SOURCE_LABELS } from './types/lead.types'
 import type { LeadStatus } from './types/lead.types'
@@ -34,7 +34,8 @@ type ConvertState = 'idle' | 'confirming' | 'done'
 
 export function LeadDetailsPage() {
   const { leadId } = useParams<{ leadId: string }>()
-  const lead = leadsMockData.find((l) => l.id === leadId)
+  const { lead } = useLead(leadId)
+  const { plan: interestedPlan } = useMembershipPlan(lead?.interestedPlanId ?? undefined)
 
   const [convertState, setConvertState] = useState<ConvertState>('idle')
   const [statusOverride, setStatusOverride] = useState<LeadStatus | null>(null)
@@ -60,9 +61,6 @@ export function LeadDetailsPage() {
   }
 
   const effectiveStatus = statusOverride ?? lead.status
-  const interestedPlan = lead.interestedPlanId
-    ? membershipPlansMockData.find((p) => p.id === lead.interestedPlanId)
-    : null
 
   const isAlreadyConverted = effectiveStatus === 'CONVERTED'
   const isLost = effectiveStatus === 'LOST'

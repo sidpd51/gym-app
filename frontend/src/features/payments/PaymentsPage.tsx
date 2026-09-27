@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { membersMockData } from '../members/data/members.mock'
+import { useMembers } from '../members/hooks/useMembers'
 import { PaymentFilters } from './components/PaymentFilters'
 import { PaymentPagination } from './components/PaymentPagination'
 import { PaymentTable } from './components/PaymentTable'
-import { paymentsMockData } from './data/payments.mock'
+import { usePayments } from './hooks/usePayments'
 import type { PaymentMethod, PaymentStatus } from './types/payment.types'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
@@ -17,15 +17,18 @@ export function PaymentsPage() {
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'ALL'>('ALL')
   const [page, setPage] = useState(1)
 
+  const { members } = useMembers()
+  const { payments } = usePayments()
+
   const membersById = useMemo(
-    () => Object.fromEntries(membersMockData.map((m) => [m.id, m])),
-    []
+    () => Object.fromEntries(members.map((m) => [m.id, m])),
+    [members]
   )
 
   const filteredPayments = useMemo(() => {
     const q = search.trim().toLowerCase()
 
-    return paymentsMockData.filter((p) => {
+    return payments.filter((p) => {
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false
       if (methodFilter !== 'ALL' && p.paymentMethod !== methodFilter) return false
       if (q) {
@@ -47,7 +50,7 @@ export function PaymentsPage() {
       }
       return true
     })
-  }, [search, statusFilter, methodFilter, membersById])
+  }, [search, statusFilter, methodFilter, membersById, payments])
 
   const totalPages = Math.max(1, Math.ceil(filteredPayments.length / PAGE_SIZE))
   const pagedPayments = filteredPayments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -67,7 +70,7 @@ export function PaymentsPage() {
     setPage(1)
   }
 
-  if (paymentsMockData.length === 0) {
+  if (payments.length === 0) {
     return (
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-4">
@@ -103,7 +106,7 @@ export function PaymentsPage() {
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">Payments</h2>
           <p className="mt-0.5 text-sm text-zinc-500">
-            {paymentsMockData.length} total payments
+            {payments.length} total payments
           </p>
         </div>
         <PermissionGate permission="payments:record">

@@ -1,24 +1,24 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { inventoryCategoriesMockData } from './data/inventory-categories.mock'
-import { inventoryMockData } from './data/inventory.mock'
+import { useInventory, useInventoryCategories } from './hooks/useInventory'
 import { InventoryFilters } from './components/InventoryFilters'
 import { InventoryTable } from './components/InventoryTable'
 import { getInventoryStatus } from './utils/inventory.utils'
 import type { InventoryItemStatus } from './types/inventory.types'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
-const categoriesById = Object.fromEntries(inventoryCategoriesMockData.map((c) => [c.id, c]))
-
 export function InventoryPage() {
+  const { items } = useInventory()
+  const { categories } = useInventoryCategories()
+  const categoriesById = Object.fromEntries(categories.map((c) => [c.id, c]))
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState<InventoryItemStatus | 'ALL'>('ALL')
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return inventoryMockData.filter((item) => {
+    return items.filter((item) => {
       if (categoryFilter !== 'ALL' && item.categoryId !== categoryFilter) return false
 
       const derivedStatus = getInventoryStatus(item.currentStock, item.minimumStock)
@@ -32,7 +32,7 @@ export function InventoryPage() {
 
       return true
     })
-  }, [search, categoryFilter, statusFilter])
+  }, [items, search, categoryFilter, statusFilter])
 
   return (
     <div className="space-y-5">

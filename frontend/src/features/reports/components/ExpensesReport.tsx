@@ -8,8 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { expensesMockData } from '@/features/expenses/data/expenses.mock'
-import { expenseCategoriesMockData } from '@/features/expenses/data/expense-categories.mock'
+import { useExpenses, useExpenseCategories } from '@/features/expenses/hooks/useExpenses'
 import { EXPENSE_PAYMENT_METHOD_LABELS } from '@/features/expenses/types/expense.types'
 import type { ExpensePaymentMethod } from '@/features/expenses/types/expense.types'
 import type { DateRange } from '../types/reports.types'
@@ -21,9 +20,12 @@ interface Props {
 }
 
 export function ExpensesReport({ range }: Props) {
+  const { expenses } = useExpenses()
+  const { categories: expenseCategories } = useExpenseCategories()
+
   const filtered = useMemo(
-    () => expensesMockData.filter((e) => inRange(e.expenseDate, range)),
-    [range]
+    () => expenses.filter((e) => inRange(e.expenseDate, range)),
+    [expenses, range]
   )
 
   const total = filtered.reduce((sum, e) => sum + e.amount, 0)
@@ -37,10 +39,10 @@ export function ExpensesReport({ range }: Props) {
     return Array.from(map.entries())
       .sort(([, a], [, b]) => b - a)
       .map(([catId, amount]) => ({
-        category: expenseCategoriesMockData.find((c) => c.id === catId)?.name ?? catId,
+        category: expenseCategories.find((c) => c.id === catId)?.name ?? catId,
         amount,
       }))
-  }, [filtered])
+  }, [filtered, expenseCategories])
 
   const byMethod = useMemo(() => {
     const map = new Map<string, number>()
@@ -197,7 +199,7 @@ export function ExpensesReport({ range }: Props) {
                       <td className="py-2 font-mono text-xs text-zinc-500">{e.expenseCode}</td>
                       <td className="py-2 text-zinc-900">{e.description}</td>
                       <td className="py-2 text-zinc-500">
-                        {expenseCategoriesMockData.find((c) => c.id === e.categoryId)?.name ?? '—'}
+                        {expenseCategories.find((c) => c.id === e.categoryId)?.name ?? '—'}
                       </td>
                       <td className="py-2 text-zinc-500">{formatDisplayDate(e.expenseDate)}</td>
                       <td className="py-2 text-right font-medium text-zinc-900">

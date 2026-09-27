@@ -8,11 +8,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { membersMockData } from '@/features/members/data/members.mock'
-import { paymentsMockData } from '@/features/payments/data/payments.mock'
-import { attendanceMockData } from '@/features/attendance/data/attendance.mock'
-import { leadsMockData } from '@/features/leads/data/leads.mock'
-import { expensesMockData } from '@/features/expenses/data/expenses.mock'
+import { useMembers } from '@/features/members/hooks/useMembers'
+import { usePayments } from '@/features/payments/hooks/usePayments'
+import { useAttendance } from '@/features/attendance/hooks/useAttendance'
+import { useLeads } from '@/features/leads/hooks/useLeads'
+import { useExpenses } from '@/features/expenses/hooks/useExpenses'
 import type { DateRange } from '../types/reports.types'
 import { inRange, fmtCurrency, fmtShort } from '../utils/report-filters'
 import { ReportStatCard } from './ReportStatCard'
@@ -22,35 +22,41 @@ interface Props {
 }
 
 export function OverviewReport({ range }: Props) {
+  const { members } = useMembers()
+  const { payments } = usePayments()
+  const { attendance } = useAttendance()
+  const { leads } = useLeads()
+  const { expenses: expensesData } = useExpenses()
+
   const filteredPayments = useMemo(
-    () => paymentsMockData.filter((p) => p.status === 'COMPLETED' && inRange(p.paymentDate, range)),
-    [range]
+    () => payments.filter((p) => p.status === 'COMPLETED' && inRange(p.paymentDate, range)),
+    [payments, range]
   )
 
   const filteredExpenses = useMemo(
-    () => expensesMockData.filter((e) => inRange(e.expenseDate, range)),
-    [range]
+    () => expensesData.filter((e) => inRange(e.expenseDate, range)),
+    [expensesData, range]
   )
 
   const revenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
   const expenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
   const netCashFlow = revenue - expenses
 
-  const activeMembers = membersMockData.filter((m) => m.status === 'ACTIVE').length
+  const activeMembers = members.filter((m) => m.status === 'ACTIVE').length
 
   const newMembers = useMemo(
-    () => membersMockData.filter((m) => inRange(m.joiningDate, range)).length,
-    [range]
+    () => members.filter((m) => inRange(m.joiningDate, range)).length,
+    [members, range]
   )
 
   const attendanceCount = useMemo(
-    () => attendanceMockData.filter((a) => inRange(a.attendanceDate, range)).length,
-    [range]
+    () => attendance.filter((a) => inRange(a.attendanceDate, range)).length,
+    [attendance, range]
   )
 
   const newLeads = useMemo(
-    () => leadsMockData.filter((l) => inRange(l.createdAt, range)).length,
-    [range]
+    () => leads.filter((l) => inRange(l.createdAt, range)).length,
+    [leads, range]
   )
 
   const chartData = useMemo(() => {

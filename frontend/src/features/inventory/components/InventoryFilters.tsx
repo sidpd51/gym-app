@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { inventoryCategoriesMockData } from '../data/inventory-categories.mock'
+import { useInventoryCategories } from '../hooks/useInventory'
 import type { InventoryItemStatus } from '../types/inventory.types'
 
 const STATUS_OPTIONS: { value: InventoryItemStatus | 'ALL'; label: string }[] = [
@@ -26,6 +26,7 @@ export function InventoryFilters({
   onCategoryChange,
   onStatusChange,
 }: InventoryFiltersProps) {
+  const { categories } = useInventoryCategories()
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="relative flex-1">
@@ -51,7 +52,7 @@ export function InventoryFilters({
           aria-label="Filter by category"
         >
           <option value="ALL">All Categories</option>
-          {inventoryCategoriesMockData
+          {categories
             .filter((c) => c.status === 'ACTIVE')
             .map((c) => (
               <option key={c.id} value={c.id}>

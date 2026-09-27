@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { leadsMockData } from '@/features/leads/data/leads.mock'
+import { useLeads } from '@/features/leads/hooks/useLeads'
 import { LEAD_STATUS_LABELS, LEAD_SOURCE_LABELS } from '@/features/leads/types/lead.types'
 import type { LeadStatus, LeadSource } from '@/features/leads/types/lead.types'
 import type { DateRange } from '../types/reports.types'
@@ -29,9 +29,11 @@ const STATUS_ORDER: LeadStatus[] = [
 ]
 
 export function LeadsReport({ range }: Props) {
+  const { leads } = useLeads()
+
   const filtered = useMemo(
-    () => leadsMockData.filter((l) => inRange(l.createdAt, range)),
-    [range]
+    () => leads.filter((l) => inRange(l.createdAt, range)),
+    [leads, range]
   )
 
   const converted = filtered.filter((l) => l.status === 'CONVERTED').length

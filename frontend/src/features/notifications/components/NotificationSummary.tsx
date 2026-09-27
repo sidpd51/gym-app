@@ -1,13 +1,14 @@
 import { AlertTriangle, Bell, CheckCircle2, Clock } from 'lucide-react'
 import { StatCard } from '@/features/dashboard/components/StatCard'
-import { notificationsMockData } from '../data/notifications.mock'
+import { useNotifications } from '../hooks/useNotifications'
 import { getExpiringMemberships, getExpiredMemberships } from '../utils/expiry.utils'
 
 export function NotificationSummary() {
+  const { notifications } = useNotifications()
   const expiringSoon = getExpiringMemberships(7).length
   const expired = getExpiredMemberships().length
-  const pending = notificationsMockData.filter((n) => n.status === 'PENDING').length
-  const sent = notificationsMockData.filter((n) => n.status === 'SENT').length
+  const pending = notifications.filter((n) => n.status === 'PENDING').length
+  const sent = notifications.filter((n) => n.status === 'SENT').length
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { leadsMockData } from './data/leads.mock'
+import { useLead } from './hooks/useLeads'
 import { LeadForm } from './components/LeadForm'
 
 export function EditLeadPage() {
   const { leadId } = useParams<{ leadId: string }>()
   const navigate = useNavigate()
 
-  const lead = leadsMockData.find((l) => l.id === leadId)
+  const { lead } = useLead(leadId)
 
   if (!lead) {
     return (
