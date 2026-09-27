@@ -110,13 +110,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2.5 px-4 py-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/90 p-0.5">
-          <img
-            src="/logo.png"
-            alt="Bajrang Fitness Club"
-            className="h-full w-full object-contain"
-          />
-        </div>
+        <img
+          src="/logo.png"
+          alt="Bajrang Fitness Club"
+          className="h-12 w-12 shrink-0 object-contain"
+        />
         <span className="text-sm font-semibold leading-tight text-white">Bajrang Fitness Club</span>
       </div>
 
