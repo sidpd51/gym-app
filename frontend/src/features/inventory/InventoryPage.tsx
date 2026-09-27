@@ -7,6 +7,7 @@ import { InventoryFilters } from './components/InventoryFilters'
 import { InventoryTable } from './components/InventoryTable'
 import { getInventoryStatus } from './utils/inventory.utils'
 import type { InventoryItemStatus } from './types/inventory.types'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 const categoriesById = Object.fromEntries(inventoryCategoriesMockData.map((c) => [c.id, c]))
 
@@ -40,13 +41,15 @@ export function InventoryPage() {
           <h2 className="text-xl font-semibold text-zinc-900">Inventory</h2>
           <p className="mt-0.5 text-sm text-zinc-500">Track gym stock and consumable items.</p>
         </div>
-        <Link
-          to="/inventory/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Add Inventory Item
-        </Link>
+        <PermissionGate permission="inventory:create">
+          <Link
+            to="/inventory/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add Inventory Item
+          </Link>
+        </PermissionGate>
       </div>
 
       <InventoryFilters

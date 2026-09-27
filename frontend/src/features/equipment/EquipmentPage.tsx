@@ -6,6 +6,7 @@ import { equipmentMockData } from './data/equipment.mock'
 import { EquipmentFilters } from './components/EquipmentFilters'
 import { EquipmentTable } from './components/EquipmentTable'
 import type { EquipmentStatus } from './types/equipment.types'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 const categoriesById = Object.fromEntries(equipmentCategoriesMockData.map((c) => [c.id, c]))
 
@@ -48,13 +49,15 @@ export function EquipmentPage() {
           <h2 className="text-xl font-semibold text-zinc-900">Equipment</h2>
           <p className="mt-0.5 text-sm text-zinc-500">Track gym assets and maintenance history.</p>
         </div>
-        <Link
-          to="/equipment/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Add Equipment
-        </Link>
+        <PermissionGate permission="equipment:create">
+          <Link
+            to="/equipment/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add Equipment
+          </Link>
+        </PermissionGate>
       </div>
 
       <EquipmentFilters

@@ -5,6 +5,7 @@ import { trainersMockData } from './data/trainers.mock'
 import { TrainerFilters } from './components/TrainerFilters'
 import { TrainerTable } from './components/TrainerTable'
 import type { TrainerStatus } from './types/trainer.types'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 type StatusFilter = TrainerStatus | 'ALL'
 
@@ -62,13 +63,15 @@ export function TrainersPage() {
             Manage gym trainers and staff.
           </p>
         </div>
-        <Link
-          to="/trainers/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Add Trainer
-        </Link>
+        <PermissionGate permission="trainers:create">
+          <Link
+            to="/trainers/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add Trainer
+          </Link>
+        </PermissionGate>
       </div>
 
       <TrainerFilters

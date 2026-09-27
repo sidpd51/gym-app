@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import type { UserRole, UserStatus } from '../types/user.types'
 import { usersMockData } from '../data/users.mock'
 import { UserFilters } from '../components/UserFilters'
@@ -52,13 +53,15 @@ export function UsersPage() {
             Manage application users and their access roles.
           </p>
         </div>
-        <Link
-          to="/users/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <UserPlus className="h-4 w-4" aria-hidden="true" />
-          Add User
-        </Link>
+        <PermissionGate permission="users:create">
+          <Link
+            to="/users/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            Add User
+          </Link>
+        </PermissionGate>
       </div>
 
       <UserFilters

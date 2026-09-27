@@ -21,28 +21,31 @@ import type { LucideIcon } from 'lucide-react'
 import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { usePermissions } from '@/features/auth/hooks/usePermissions'
+import type { Permission } from '@/features/auth/permissions/permissions'
 
 interface NavItem {
   label: string
   icon: LucideIcon
   to: string
+  permission?: Permission
 }
 
 const mainNavItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
-  { label: 'Members', icon: Users, to: '/members' },
-  { label: 'Memberships', icon: BadgeCheck, to: '/memberships' },
-  { label: 'Membership Plans', icon: CreditCard, to: '/membership-plans' },
-  { label: 'Attendance', icon: CalendarCheck, to: '/attendance' },
-  { label: 'Payments', icon: DollarSign, to: '/payments' },
-  { label: 'Trainers', icon: Dumbbell, to: '/trainers' },
-  { label: 'Leads', icon: UserPlus, to: '/leads' },
-  { label: 'Expenses', icon: Receipt, to: '/expenses' },
-  { label: 'Inventory', icon: Package, to: '/inventory' },
-  { label: 'Equipment', icon: Wrench, to: '/equipment' },
-  { label: 'Reports', icon: BarChart2, to: '/reports' },
-  { label: 'Notifications', icon: Bell, to: '/notifications' },
-  { label: 'Users', icon: Shield, to: '/users' },
+  { label: 'Members', icon: Users, to: '/members', permission: 'members:view' },
+  { label: 'Memberships', icon: BadgeCheck, to: '/memberships', permission: 'memberships:view' },
+  { label: 'Membership Plans', icon: CreditCard, to: '/membership-plans', permission: 'membership-plans:view' },
+  { label: 'Attendance', icon: CalendarCheck, to: '/attendance', permission: 'attendance:view' },
+  { label: 'Payments', icon: DollarSign, to: '/payments', permission: 'payments:view' },
+  { label: 'Trainers', icon: Dumbbell, to: '/trainers', permission: 'trainers:view' },
+  { label: 'Leads', icon: UserPlus, to: '/leads', permission: 'leads:view' },
+  { label: 'Expenses', icon: Receipt, to: '/expenses', permission: 'expenses:view' },
+  { label: 'Inventory', icon: Package, to: '/inventory', permission: 'inventory:view' },
+  { label: 'Equipment', icon: Wrench, to: '/equipment', permission: 'equipment:view' },
+  { label: 'Reports', icon: BarChart2, to: '/reports', permission: 'reports:view' },
+  { label: 'Notifications', icon: Bell, to: '/notifications', permission: 'notifications:view' },
+  { label: 'Users', icon: Shield, to: '/users', permission: 'users:view' },
 ]
 
 function NavItemLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
@@ -66,6 +69,11 @@ function NavItemLink({ item, onClick }: { item: NavItem; onClick?: () => void })
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const { hasPermission } = usePermissions()
+  const visibleItems = mainNavItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  )
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2.5 px-4 py-5">
@@ -74,16 +82,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 px-2 py-2" aria-label="Main navigation">
-        {mainNavItems.map((item) => (
+        {visibleItems.map((item) => (
           <NavItemLink key={item.to} item={item} onClick={onNavigate} />
         ))}
       </nav>
 
-      <div className="px-2 pb-4">
-        <div className="border-t border-zinc-800 pt-2">
-          <NavItemLink item={{ label: 'Settings', icon: Settings, to: '/settings' }} onClick={onNavigate} />
+      {hasPermission('settings:view') && (
+        <div className="px-2 pb-4">
+          <div className="border-t border-zinc-800 pt-2">
+            <NavItemLink item={{ label: 'Settings', icon: Settings, to: '/settings' }} onClick={onNavigate} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

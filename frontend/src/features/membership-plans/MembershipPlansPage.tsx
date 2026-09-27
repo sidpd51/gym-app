@@ -5,6 +5,7 @@ import type { MembershipPlanStatus } from './types/membership-plan.types'
 import { membershipPlansMockData } from './data/membership-plans.mock'
 import { MembershipPlanFilters } from './components/MembershipPlanFilters'
 import { MembershipPlanTable } from './components/MembershipPlanTable'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 type StatusFilter = MembershipPlanStatus | 'ALL'
 
@@ -54,13 +55,15 @@ export function MembershipPlansPage() {
             Manage the plans offered by your gym.
           </p>
         </div>
-        <Link
-          to="/membership-plans/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Create Plan
-        </Link>
+        <PermissionGate permission="membership-plans:create">
+          <Link
+            to="/membership-plans/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Create Plan
+          </Link>
+        </PermissionGate>
       </div>
 
       <MembershipPlanFilters

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import { cn } from '@/lib/utils'
 import type { NotificationRecord, NotificationTab } from './types/notification.types'
 import { NOTIFICATION_TABS } from './types/notification.types'
@@ -38,14 +39,16 @@ export function NotificationsPage() {
             Track expiring memberships and manage reminder records.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => openDialog()}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus size={15} aria-hidden="true" />
-          Create Reminder
-        </button>
+        <PermissionGate permission="notifications:create">
+          <button
+            type="button"
+            onClick={() => openDialog()}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus size={15} aria-hidden="true" />
+            Create Reminder
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Summary cards */}

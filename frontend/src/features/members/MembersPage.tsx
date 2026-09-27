@@ -6,6 +6,7 @@ import { membersMockData } from './data/members.mock'
 import { MemberFilters } from './components/MemberFilters'
 import { MembersPagination } from './components/MembersPagination'
 import { MemberTable } from './components/MemberTable'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 const PAGE_SIZE = 10
 
@@ -74,13 +75,15 @@ export function MembersPage() {
             {membersMockData.length} total members
           </p>
         </div>
-        <Link
-          to="/members/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <UserPlus className="h-4 w-4" aria-hidden="true" />
-          Add Member
-        </Link>
+        <PermissionGate permission="members:create">
+          <Link
+            to="/members/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            Add Member
+          </Link>
+        </PermissionGate>
       </div>
 
       <MemberFilters

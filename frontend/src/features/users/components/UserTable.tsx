@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { User } from '../types/user.types'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import { UserAvatar } from './UserAvatar'
 import { UserRoleBadge } from './UserRoleBadge'
 import { UserStatusBadge } from './UserStatusBadge'
@@ -91,12 +92,14 @@ export function UserTable({ users }: UserTableProps) {
                   >
                     View
                   </Link>
-                  <Link
-                    to={`/users/${user.id}/edit`}
-                    className="rounded px-2.5 py-1 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50"
-                  >
-                    Edit
-                  </Link>
+                  <PermissionGate permission="users:edit">
+                    <Link
+                      to={`/users/${user.id}/edit`}
+                      className="rounded px-2.5 py-1 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50"
+                    >
+                      Edit
+                    </Link>
+                  </PermissionGate>
                 </div>
               </td>
             </tr>

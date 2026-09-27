@@ -7,6 +7,7 @@ import { ExpenseFilters } from './components/ExpenseFilters'
 import { ExpenseTable } from './components/ExpenseTable'
 import type { DateFilter } from './components/ExpenseFilters'
 import type { ExpensePaymentMethod } from './types/expense.types'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 function matchesDateFilter(dateStr: string, filter: DateFilter): boolean {
   if (filter === 'ALL') return true
@@ -72,13 +73,15 @@ export function ExpensesPage() {
           <h2 className="text-xl font-semibold text-zinc-900">Expenses</h2>
           <p className="mt-0.5 text-sm text-zinc-500">Track gym operating expenses.</p>
         </div>
-        <Link
-          to="/expenses/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Record Expense
-        </Link>
+        <PermissionGate permission="expenses:create">
+          <Link
+            to="/expenses/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Record Expense
+          </Link>
+        </PermissionGate>
       </div>
 
       <ExpenseFilters

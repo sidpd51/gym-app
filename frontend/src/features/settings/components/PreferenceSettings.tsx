@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import type { GymSettings, DateFormat } from '../types/settings.types'
 import { preferencesSchema, type PreferencesFormValues } from '../schemas/settings.schema'
 
@@ -169,13 +170,15 @@ export function PreferenceSettings({ settings, onSave }: PreferenceSettingsProps
           >
             Reset
           </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Save Changes
-          </button>
+          <PermissionGate permission="settings:edit">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save Changes
+            </button>
+          </PermissionGate>
         </div>
       </div>
     </form>

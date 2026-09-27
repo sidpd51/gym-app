@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import { equipmentCategoriesMockData } from './data/equipment-categories.mock'
 import { equipmentMockData } from './data/equipment.mock'
 import { equipmentMaintenanceMockData } from './data/equipment-maintenance.mock'
@@ -85,18 +86,22 @@ export function EquipmentDetailsPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Link
-              to={`/equipment/${equipment.id}/maintenance/new`}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50"
-            >
-              Add Maintenance
-            </Link>
-            <Link
-              to={`/equipment/${equipment.id}/edit`}
-              className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-            >
-              Edit Equipment
-            </Link>
+            <PermissionGate permission="equipment:maintenance">
+              <Link
+                to={`/equipment/${equipment.id}/maintenance/new`}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50"
+              >
+                Add Maintenance
+              </Link>
+            </PermissionGate>
+            <PermissionGate permission="equipment:edit">
+              <Link
+                to={`/equipment/${equipment.id}/edit`}
+                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+              >
+                Edit Equipment
+              </Link>
+            </PermissionGate>
           </div>
         </div>
       </div>

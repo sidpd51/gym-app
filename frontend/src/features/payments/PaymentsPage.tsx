@@ -7,6 +7,7 @@ import { PaymentPagination } from './components/PaymentPagination'
 import { PaymentTable } from './components/PaymentTable'
 import { paymentsMockData } from './data/payments.mock'
 import type { PaymentMethod, PaymentStatus } from './types/payment.types'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 const PAGE_SIZE = 10
 
@@ -76,13 +77,15 @@ export function PaymentsPage() {
               Track membership payments and financial transactions.
             </p>
           </div>
-          <Link
-            to="/payments/new"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Record Payment
-          </Link>
+          <PermissionGate permission="payments:record">
+            <Link
+              to="/payments/new"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Record Payment
+            </Link>
+          </PermissionGate>
         </div>
         <div className="rounded-lg border border-zinc-200 bg-white px-5 py-16 text-center">
           <p className="text-sm font-medium text-zinc-700">No payments yet</p>
@@ -103,13 +106,15 @@ export function PaymentsPage() {
             {paymentsMockData.length} total payments
           </p>
         </div>
-        <Link
-          to="/payments/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Record Payment
-        </Link>
+        <PermissionGate permission="payments:record">
+          <Link
+            to="/payments/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Record Payment
+          </Link>
+        </PermissionGate>
       </div>
 
       <PaymentFilters

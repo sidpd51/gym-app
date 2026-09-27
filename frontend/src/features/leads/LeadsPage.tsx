@@ -5,6 +5,7 @@ import { leadsMockData } from './data/leads.mock'
 import { LeadFilters } from './components/LeadFilters'
 import { LeadTable } from './components/LeadTable'
 import type { LeadSource, LeadStatus } from './types/lead.types'
+import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 export function LeadsPage() {
   const [search, setSearch] = useState('')
@@ -48,13 +49,15 @@ export function LeadsPage() {
           <h2 className="text-xl font-semibold text-zinc-900">Leads</h2>
           <p className="mt-0.5 text-sm text-zinc-500">Manage enquiries and follow-ups.</p>
         </div>
-        <Link
-          to="/leads/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Add Lead
-        </Link>
+        <PermissionGate permission="leads:create">
+          <Link
+            to="/leads/new"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add Lead
+          </Link>
+        </PermissionGate>
       </div>
 
       <LeadFilters
