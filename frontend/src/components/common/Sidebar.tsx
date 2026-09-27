@@ -11,6 +11,7 @@ import {
   Package,
   Receipt,
   Settings,
+  Shield,
   UserPlus,
   Users,
   Wrench,
@@ -41,6 +42,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Equipment', icon: Wrench, to: '/equipment' },
   { label: 'Reports', icon: BarChart2, to: '/reports' },
   { label: 'Notifications', icon: Bell, to: '/notifications' },
+  { label: 'Users', icon: Shield, to: '/users' },
 ]
 
 function NavItemLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {

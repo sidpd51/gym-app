@@ -1,5 +1,8 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/app/layouts/AppLayout'
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
+import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { ProfilePage } from '@/features/auth/pages/ProfilePage'
 import { AttendancePage } from '@/features/attendance/AttendancePage'
 import { MarkAttendancePage } from '@/features/attendance/MarkAttendancePage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
@@ -40,11 +43,20 @@ import { CreateTrainerPage } from '@/features/trainers/CreateTrainerPage'
 import { EditTrainerPage } from '@/features/trainers/EditTrainerPage'
 import { TrainerDetailsPage } from '@/features/trainers/TrainerDetailsPage'
 import { TrainersPage } from '@/features/trainers/TrainersPage'
+import { CreateUserPage } from '@/features/users/pages/CreateUserPage'
+import { EditUserPage } from '@/features/users/pages/EditUserPage'
+import { UserDetailsPage } from '@/features/users/pages/UserDetailsPage'
+import { UsersPage } from '@/features/users/pages/UsersPage'
 
 export const router = createBrowserRouter([
+  { path: '/login', element: <LoginPage /> },
   {
     path: '/',
-    element: <AppLayout />,
+    element: (
+      <ProtectedRoute>
+        <AppLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
@@ -86,6 +98,11 @@ export const router = createBrowserRouter([
       { path: 'reports', element: <ReportsPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'profile', element: <ProfilePage /> },
+      { path: 'users', element: <UsersPage /> },
+      { path: 'users/new', element: <CreateUserPage /> },
+      { path: 'users/:userId/edit', element: <EditUserPage /> },
+      { path: 'users/:userId', element: <UserDetailsPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },
