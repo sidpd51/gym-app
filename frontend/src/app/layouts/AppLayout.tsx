@@ -14,8 +14,10 @@ export function AppLayout() {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onMenuClick={() => setMobileSidebarOpen(true)} />
-        <main className="flex-1 overflow-auto p-6">
-          <Outlet />
+        <main className="relative flex-1">
+          <div className="absolute inset-0 overflow-y-auto px-6 pt-6 pb-4 flex flex-col">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

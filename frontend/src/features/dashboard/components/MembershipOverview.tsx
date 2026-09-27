@@ -1,5 +1,5 @@
 import type { MembershipPlanCount } from '../types/dashboard.types'
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 
 const PLAN_COLORS: Record<string, string> = {
   Monthly: '#3b82f6',
@@ -22,14 +22,14 @@ export function MembershipOverview({ data }: MembershipOverviewProps) {
         {total.toLocaleString('en-IN')} active members
       </p>
       <figure className="mt-4 mb-0" aria-label="Membership distribution chart">
-        <ResponsiveContainer width="100%" height={220}>
+        <ResponsiveContainer width="100%" height={200}>
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
               innerRadius={58}
-              outerRadius={85}
+              outerRadius={82}
               dataKey="count"
               nameKey="plan"
               paddingAngle={2}
@@ -50,9 +50,19 @@ export function MembershipOverview({ data }: MembershipOverviewProps) {
                 boxShadow: 'none',
               }}
             />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
           </PieChart>
         </ResponsiveContainer>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+          {data.map((item) => (
+            <div key={item.plan} className="flex items-center gap-1.5 text-xs text-zinc-600">
+              <span
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: PLAN_COLORS[item.plan] ?? '#a1a1aa' }}
+              />
+              {item.plan}
+            </div>
+          ))}
+        </div>
       </figure>
     </div>
   )

@@ -47,7 +47,7 @@ export function LoginPage() {
           <img
             src="/logo.png"
             alt="Bajrang Fitness Club"
-            className="h-20 w-20 object-contain"
+            className="h-48 w-48 object-contain"
           />
           <div className="text-center">
             <h1 className="text-xl font-bold text-zinc-900">Bajrang Fitness Club</h1>

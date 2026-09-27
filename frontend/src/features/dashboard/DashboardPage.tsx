@@ -22,7 +22,7 @@ export function DashboardPage() {
   const activePct = ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1)
 
   return (
-    <div className="space-y-6">
+    <div className="flex grow flex-col gap-6">
       <DashboardHeader />
 
       {/* Summary stats */}
@@ -73,8 +73,10 @@ export function DashboardPage() {
       {/* Expiring memberships */}
       <ExpiringMemberships data={expiringMemberships} />
 
-      {/* Recent payments */}
-      <RecentPayments data={recentPayments} />
+      {/* Recent payments — grows to consume remaining viewport height on tall screens */}
+      <div className="flex grow flex-col">
+        <RecentPayments data={recentPayments} />
+      </div>
     </div>
   )
 }

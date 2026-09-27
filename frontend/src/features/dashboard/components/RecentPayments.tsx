@@ -10,7 +10,7 @@ function formatAmount(amount: number): string {
 
 export function RecentPayments({ data }: RecentPaymentsProps) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white">
+    <div className="flex grow flex-col rounded-lg border border-zinc-200 bg-white">
       <div className="border-b border-zinc-200 px-5 py-4">
         <h3 className="text-sm font-semibold text-zinc-900">Recent Payments</h3>
       </div>
