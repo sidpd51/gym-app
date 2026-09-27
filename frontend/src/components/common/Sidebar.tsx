@@ -2,7 +2,6 @@ import {
   BadgeCheck,
   BarChart2,
   Bell,
-  Building2,
   CalendarCheck,
   ClipboardList,
   CreditCard,
@@ -110,9 +109,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2.5 px-4 py-5">
-        <Building2 size={18} className="shrink-0 text-white" aria-hidden="true" />
-        <span className="text-sm font-semibold text-white">Gym Management</span>
+      <div className="flex items-center gap-2.5 px-4 py-4">
+        <img
+          src="/logo.png"
+          alt="Bajrang Fitness Club"
+          className="h-9 w-9 shrink-0 object-contain"
+        />
+        <span className="text-sm font-semibold leading-tight text-white">Bajrang Fitness Club</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-2" aria-label="Main navigation">

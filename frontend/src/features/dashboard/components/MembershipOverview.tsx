@@ -21,7 +21,7 @@ export function MembershipOverview({ data }: MembershipOverviewProps) {
       <p className="mt-0.5 text-xs text-zinc-500">
         {total.toLocaleString('en-IN')} active members
       </p>
-      <figure className="mt-4" aria-label="Membership distribution chart">
+      <figure className="mt-4 mb-0" aria-label="Membership distribution chart">
         <ResponsiveContainer width="100%" height={220}>
           <PieChart>
             <Pie

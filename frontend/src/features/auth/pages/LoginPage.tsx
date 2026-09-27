@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, Building2, Eye, EyeOff, Info } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '../context/useAuth'
 import { loginSchema, type LoginFormValues } from '../schemas/login.schema'
@@ -44,11 +44,13 @@ export function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Branding */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-900">
-            <Building2 size={24} className="text-white" aria-hidden="true" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Bajrang Fitness Club"
+            className="h-20 w-20 object-contain"
+          />
           <div className="text-center">
-            <h1 className="text-xl font-bold text-zinc-900">Gym Management</h1>
+            <h1 className="text-xl font-bold text-zinc-900">Bajrang Fitness Club</h1>
             <p className="mt-0.5 text-sm text-zinc-500">Sign in to your account</p>
           </div>
         </div>

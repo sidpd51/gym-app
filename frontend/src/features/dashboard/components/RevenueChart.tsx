@@ -22,7 +22,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
     <div className="rounded-lg border border-zinc-200 bg-white p-5">
       <h3 className="text-sm font-semibold text-zinc-900">Revenue Overview</h3>
       <p className="mt-0.5 text-xs text-zinc-500">Last 6 months</p>
-      <figure className="mt-4" aria-label="Monthly revenue chart">
+      <figure className="mt-4 mb-0" aria-label="Monthly revenue chart">
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
             <defs>
