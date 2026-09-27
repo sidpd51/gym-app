@@ -7,9 +7,9 @@ export function UnauthorizedPage() {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <ShieldOff size={40} className="text-zinc-300" aria-hidden="true" />
-      <h2 className="mt-4 text-lg font-semibold text-zinc-800">Access Denied</h2>
+      <h2 className="mt-4 text-lg font-semibold text-zinc-800">Access Restricted</h2>
       <p className="mt-1.5 text-sm text-zinc-500">
-        You don't have permission to view this page.
+        You don't have permission to access this page. Contact your administrator if you need access.
       </p>
       <div className="mt-6 flex gap-3">
         <button

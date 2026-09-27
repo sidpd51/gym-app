@@ -3,6 +3,7 @@ import { Bell, ChevronDown, LogOut, Menu, User } from 'lucide-react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/context/useAuth'
 import { UserAvatar } from '@/features/users/components/UserAvatar'
+import { GlobalSearch } from './GlobalSearch'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -81,6 +82,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <h1 className="flex-1 text-base font-semibold text-zinc-900">{title}</h1>
 
       <div className="flex items-center gap-1">
+        <GlobalSearch />
         {/* Notifications link */}
         <NavLink
           to="/notifications"
