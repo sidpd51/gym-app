@@ -33,6 +33,7 @@ import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { PaymentDetailsPage } from '@/features/payments/PaymentDetailsPage'
 import { PaymentsPage } from '@/features/payments/PaymentsPage'
 import { RecordPaymentPage } from '@/features/payments/RecordPaymentPage'
+import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CreateTrainerPage } from '@/features/trainers/CreateTrainerPage'
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
       { path: 'equipment/:equipmentId/maintenance/new', element: <AddMaintenancePage /> },
       { path: 'equipment/:equipmentId', element: <EquipmentDetailsPage /> },
       { path: 'reports', element: <ReportsPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },

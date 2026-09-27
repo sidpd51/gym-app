@@ -11,6 +11,7 @@ import { PaymentHistory } from './components/PaymentHistory'
 import { PersonalInformation } from './components/PersonalInformation'
 import { CurrentTrainerCard } from '../member-trainer/components/CurrentTrainerCard'
 import { TrainerAssignmentHistory } from '../member-trainer/components/TrainerAssignmentHistory'
+import { MemberReminderHistory } from '../notifications/components/MemberReminderHistory'
 
 export function MemberDetailsPage() {
   const { memberId } = useParams<{ memberId: string }>()
@@ -81,6 +82,9 @@ export function MemberDetailsPage() {
 
       {/* Trainer assignment history */}
       <TrainerAssignmentHistory memberId={member.id} />
+
+      {/* Reminder history */}
+      <MemberReminderHistory memberId={member.id} />
     </div>
   )
 }

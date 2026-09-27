@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   BarChart2,
+  Bell,
   Building2,
   CalendarCheck,
   CreditCard,
@@ -39,6 +40,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Inventory', icon: Package, to: '/inventory' },
   { label: 'Equipment', icon: Wrench, to: '/equipment' },
   { label: 'Reports', icon: BarChart2, to: '/reports' },
+  { label: 'Notifications', icon: Bell, to: '/notifications' },
 ]
 
 function NavItemLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
