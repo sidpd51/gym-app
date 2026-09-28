@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react'
 import { useUsers } from '@/features/users/hooks/useUsers'
 import { FilterSelect } from '@/components/common/FilterSelect'
+import { DatePicker } from '@/components/common/DatePicker'
 import type { AuditAction, AuditEntityType, AuditStatus, DateFilter } from '../types/audit-log.types'
 import {
   AUDIT_ACTION_LABELS,
@@ -152,28 +153,24 @@ export function AuditLogFilters({
       {dateFilter === 'CUSTOM' && (
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label htmlFor="fromDate" className="block text-xs font-medium text-zinc-600">
-              From
-            </label>
-            <input
-              id="fromDate"
-              type="date"
-              value={fromDate}
-              onChange={(e) => onFromDateChange(e.target.value)}
-              className="mt-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label className="block text-xs font-medium text-zinc-600">From</label>
+            <div className="mt-1">
+              <DatePicker
+                value={fromDate}
+                onChange={onFromDateChange}
+                disabled={toDate ? { after: new Date(toDate + 'T00:00:00') } : undefined}
+              />
+            </div>
           </div>
           <div>
-            <label htmlFor="toDate" className="block text-xs font-medium text-zinc-600">
-              To
-            </label>
-            <input
-              id="toDate"
-              type="date"
-              value={toDate}
-              onChange={(e) => onToDateChange(e.target.value)}
-              className="mt-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label className="block text-xs font-medium text-zinc-600">To</label>
+            <div className="mt-1">
+              <DatePicker
+                value={toDate}
+                onChange={onToDateChange}
+                disabled={fromDate ? { before: new Date(fromDate + 'T00:00:00') } : undefined}
+              />
+            </div>
           </div>
           {customRangeError && (
             <p className="text-xs text-red-600" role="alert">

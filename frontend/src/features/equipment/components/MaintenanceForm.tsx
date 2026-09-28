@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -79,6 +80,7 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<EquipmentMaintenanceFormValues>({
     resolver: zodResolver(equipmentMaintenanceSchema),
@@ -143,11 +145,16 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
               htmlFor="maintenanceDate"
               error={errors.maintenanceDate?.message}
             >
-              <input
-                id="maintenanceDate"
-                type="date"
-                className={inputCls(!!errors.maintenanceDate)}
-                {...register('maintenanceDate')}
+              <Controller
+                name="maintenanceDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.maintenanceDate}
+                  />
+                )}
               />
             </Field>
 
@@ -223,11 +230,16 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
               htmlFor="nextMaintenanceDate"
               error={errors.nextMaintenanceDate?.message}
             >
-              <input
-                id="nextMaintenanceDate"
-                type="date"
-                className={inputCls(!!errors.nextMaintenanceDate)}
-                {...register('nextMaintenanceDate')}
+              <Controller
+                name="nextMaintenanceDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.nextMaintenanceDate}
+                  />
+                )}
               />
             </Field>
 

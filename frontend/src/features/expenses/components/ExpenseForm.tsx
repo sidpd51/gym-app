@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -83,6 +84,7 @@ export function ExpenseForm({ mode, defaultValues, onCancel }: ExpenseFormProps)
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -204,11 +206,16 @@ export function ExpenseForm({ mode, defaultValues, onCancel }: ExpenseFormProps)
               htmlFor="expenseDate"
               error={errors.expenseDate?.message}
             >
-              <input
-                id="expenseDate"
-                type="date"
-                className={inputCls(!!errors.expenseDate)}
-                {...register('expenseDate')}
+              <Controller
+                name="expenseDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.expenseDate}
+                  />
+                )}
               />
             </Field>
 

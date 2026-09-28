@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -38,6 +39,7 @@ export function TrainerAssignmentForm({
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<AssignTrainerFormValues>({
     resolver: zodResolver(assignTrainerSchema),
@@ -94,11 +96,16 @@ export function TrainerAssignmentForm({
             Start Date <span className="text-red-500">*</span>
           </label>
           <div className="mt-1">
-            <input
-              id="startDate"
-              type="date"
-              className={inputCls(!!errors.startDate)}
-              {...register('startDate')}
+            <Controller
+              name="startDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  error={!!errors.startDate}
+                />
+              )}
             />
           </div>
           {errors.startDate && (

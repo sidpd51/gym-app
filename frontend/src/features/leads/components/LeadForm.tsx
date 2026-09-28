@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -72,6 +73,7 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<LeadFormValues>({
     resolver: zodResolver(leadSchema),
@@ -214,11 +216,16 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
               htmlFor="nextFollowUpDate"
               error={errors.nextFollowUpDate?.message}
             >
-              <input
-                id="nextFollowUpDate"
-                type="date"
-                className={inputCls(!!errors.nextFollowUpDate)}
-                {...register('nextFollowUpDate')}
+              <Controller
+                name="nextFollowUpDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.nextFollowUpDate}
+                  />
+                )}
               />
             </Field>
           </div>

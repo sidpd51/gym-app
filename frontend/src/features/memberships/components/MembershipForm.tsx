@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -33,15 +34,6 @@ function formatLocalDate(dateStr: string): string {
     month: 'short',
     year: 'numeric',
   })
-}
-
-function inputCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
-    hasError
-      ? 'border-red-300 bg-red-50 focus:ring-red-400'
-      : 'border-zinc-200 bg-white focus:ring-blue-500'
-  )
 }
 
 function selectCls(hasError: boolean) {
@@ -96,6 +88,7 @@ export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<CreateMembershipFormValues>({
     resolver: zodResolver(createMembershipSchema),
@@ -169,11 +162,16 @@ export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
               htmlFor="startDate"
               error={errors.startDate?.message}
             >
-              <input
-                id="startDate"
-                type="date"
-                className={inputCls(!!errors.startDate)}
-                {...register('startDate')}
+              <Controller
+                name="startDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.startDate}
+                  />
+                )}
               />
             </Field>
 

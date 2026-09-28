@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -72,6 +73,7 @@ export function EquipmentForm({ mode, defaultValues, onCancel }: EquipmentFormPr
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<EquipmentFormValues>({
     resolver: zodResolver(equipmentSchema),
@@ -246,11 +248,16 @@ export function EquipmentForm({ mode, defaultValues, onCancel }: EquipmentFormPr
               htmlFor="purchaseDate"
               error={errors.purchaseDate?.message}
             >
-              <input
-                id="purchaseDate"
-                type="date"
-                className={inputCls(!!errors.purchaseDate)}
-                {...register('purchaseDate')}
+              <Controller
+                name="purchaseDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.purchaseDate}
+                  />
+                )}
               />
             </Field>
 

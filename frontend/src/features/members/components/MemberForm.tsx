@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -70,6 +71,7 @@ export function MemberForm({ onCancel }: MemberFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<MemberFormValues>({
     resolver: zodResolver(createMemberSchema),
@@ -149,12 +151,17 @@ export function MemberForm({ onCancel }: MemberFormProps) {
             </Field>
 
             <Field label="Date of Birth" htmlFor="dateOfBirth" error={errors.dateOfBirth?.message}>
-              <input
-                id="dateOfBirth"
-                type="date"
-                max={new Date().toISOString().split('T')[0]}
-                className={inputCls(!!errors.dateOfBirth)}
-                {...register('dateOfBirth')}
+              <Controller
+                name="dateOfBirth"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.dateOfBirth}
+                    disabled={{ after: new Date() }}
+                  />
+                )}
               />
             </Field>
 
@@ -271,11 +278,16 @@ export function MemberForm({ onCancel }: MemberFormProps) {
               htmlFor="joiningDate"
               error={errors.joiningDate?.message}
             >
-              <input
-                id="joiningDate"
-                type="date"
-                className={inputCls(!!errors.joiningDate)}
-                {...register('joiningDate')}
+              <Controller
+                name="joiningDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.joiningDate}
+                  />
+                )}
               />
             </Field>
           </div>

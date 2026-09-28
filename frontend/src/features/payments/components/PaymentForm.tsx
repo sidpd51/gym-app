@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -105,6 +106,7 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
     watch,
     setValue,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RecordPaymentFormValues>({
     resolver: zodResolver(recordPaymentSchema),
@@ -263,11 +265,16 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
               htmlFor="paymentDate"
               error={errors.paymentDate?.message}
             >
-              <input
-                id="paymentDate"
-                type="date"
-                className={inputCls(!!errors.paymentDate)}
-                {...register('paymentDate')}
+              <Controller
+                name="paymentDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.paymentDate}
+                  />
+                )}
               />
             </Field>
 

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, AlertTriangle } from 'lucide-react'
@@ -47,6 +48,7 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<MarkAttendanceFormValues>({
     resolver: zodResolver(markAttendanceSchema),
@@ -135,10 +137,16 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
         <label className="block text-sm font-medium text-zinc-700">
           Date <span className="text-red-500">*</span>
         </label>
-        <input
-          type="date"
-          {...register('attendanceDate')}
-          className={inputCls(!!errors.attendanceDate)}
+        <Controller
+          name="attendanceDate"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              value={field.value ?? ''}
+              onChange={field.onChange}
+              error={!!errors.attendanceDate}
+            />
+          )}
         />
         {errors.attendanceDate && (
           <p className="text-xs text-red-500">{errors.attendanceDate.message}</p>

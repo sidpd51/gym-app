@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -56,6 +57,7 @@ export function TrainerForm({ mode, defaultValues, onCancel }: TrainerFormProps)
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<TrainerFormValues>({
     resolver: zodResolver(trainerSchema),
@@ -208,11 +210,16 @@ export function TrainerForm({ mode, defaultValues, onCancel }: TrainerFormProps)
               htmlFor="joiningDate"
               error={errors.joiningDate?.message}
             >
-              <input
-                id="joiningDate"
-                type="date"
-                className={inputCls(!!errors.joiningDate)}
-                {...register('joiningDate')}
+              <Controller
+                name="joiningDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={!!errors.joiningDate}
+                  />
+                )}
               />
             </Field>
           </div>

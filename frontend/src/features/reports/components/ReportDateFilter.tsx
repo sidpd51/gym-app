@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { DatePicker } from '@/components/common/DatePicker'
 import { DATE_PRESETS, DATE_PRESET_LABELS } from '../types/reports.types'
 import type { DatePreset, DateRange } from '../types/reports.types'
 import { getDateRange, formatDisplayRange } from '../utils/report-filters'
@@ -53,22 +54,20 @@ export function ReportDateFilter({ onRangeChange }: ReportDateFilterProps) {
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <label className="text-xs text-zinc-500">From</label>
-            <input
-              type="date"
+            <DatePicker
               value={customStart}
-              max={customEnd || undefined}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="rounded-md border border-zinc-300 px-2 py-1 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              onChange={setCustomStart}
+              disabled={customEnd ? { after: new Date(customEnd + 'T00:00:00') } : undefined}
+              className="w-auto"
             />
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs text-zinc-500">To</label>
-            <input
-              type="date"
+            <DatePicker
               value={customEnd}
-              min={customStart || undefined}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="rounded-md border border-zinc-300 px-2 py-1 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              onChange={setCustomEnd}
+              disabled={customStart ? { before: new Date(customStart + 'T00:00:00') } : undefined}
+              className="w-auto"
             />
           </div>
         </div>
