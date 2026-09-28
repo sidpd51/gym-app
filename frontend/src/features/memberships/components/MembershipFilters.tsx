@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import type { MembershipStatus } from '../types/membership.types'
 
 interface PlanOption {
@@ -46,22 +47,20 @@ export function MembershipFilters({
       </div>
 
       <div className="flex gap-2">
-        <select
+        <FilterSelect
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value as MembershipStatus | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={planFilter}
           onChange={(e) => onPlanChange(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="ALL">All Plans</option>
           {planOptions.map((opt) => (
@@ -69,7 +68,7 @@ export function MembershipFilters({
               {opt.name}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
     </div>
   )

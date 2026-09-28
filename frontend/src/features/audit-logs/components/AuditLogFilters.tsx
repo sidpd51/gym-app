@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react'
 import { useUsers } from '@/features/users/hooks/useUsers'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import type { AuditAction, AuditEntityType, AuditStatus, DateFilter } from '../types/audit-log.types'
 import {
   AUDIT_ACTION_LABELS,
@@ -7,9 +8,6 @@ import {
   AUDIT_STATUS_LABELS,
   DATE_FILTER_OPTIONS,
 } from '../types/audit-log.types'
-
-const SELECT_CLS =
-  'rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
 
 interface AuditLogFiltersProps {
   search: string
@@ -81,10 +79,9 @@ export function AuditLogFilters({
         </div>
 
         {/* Action */}
-        <select
+        <FilterSelect
           value={actionFilter}
           onChange={(e) => onActionChange(e.target.value as AuditAction | 'ALL')}
-          className={SELECT_CLS}
           aria-label="Filter by action"
         >
           <option value="ALL">All Actions</option>
@@ -93,13 +90,12 @@ export function AuditLogFilters({
               {AUDIT_ACTION_LABELS[a]}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
         {/* Entity */}
-        <select
+        <FilterSelect
           value={entityFilter}
           onChange={(e) => onEntityChange(e.target.value as AuditEntityType | 'ALL')}
-          className={SELECT_CLS}
           aria-label="Filter by entity"
         >
           <option value="ALL">All Entities</option>
@@ -108,13 +104,12 @@ export function AuditLogFilters({
               {AUDIT_ENTITY_LABELS[e]}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
         {/* Status */}
-        <select
+        <FilterSelect
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value as AuditStatus | 'ALL')}
-          className={SELECT_CLS}
           aria-label="Filter by status"
         >
           <option value="ALL">All Statuses</option>
@@ -123,13 +118,12 @@ export function AuditLogFilters({
               {AUDIT_STATUS_LABELS[s]}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
         {/* User */}
-        <select
+        <FilterSelect
           value={userFilter}
           onChange={(e) => onUserChange(e.target.value)}
-          className={SELECT_CLS}
           aria-label="Filter by user"
         >
           <option value="ALL">All Users</option>
@@ -138,13 +132,12 @@ export function AuditLogFilters({
               {u.firstName} {u.lastName}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
         {/* Date */}
-        <select
+        <FilterSelect
           value={dateFilter}
           onChange={(e) => onDateFilterChange(e.target.value as DateFilter)}
-          className={SELECT_CLS}
           aria-label="Filter by date"
         >
           {DATE_FILTER_OPTIONS.map((opt) => (
@@ -152,7 +145,7 @@ export function AuditLogFilters({
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
 
       {/* Custom date range */}

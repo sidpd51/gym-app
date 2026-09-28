@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import type { UserRole, UserStatus } from '../types/user.types'
 
 interface UserFiltersProps {
@@ -46,29 +47,27 @@ export function UserFilters({
       </div>
 
       <div className="flex gap-2">
-        <select
+        <FilterSelect
           value={roleFilter}
           onChange={(e) => onRoleChange(e.target.value as UserRole | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {ROLE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value as UserStatus | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import { useEquipmentCategories } from '../hooks/useEquipment'
 import type { EquipmentStatus } from '../types/equipment.types'
 
@@ -46,10 +47,9 @@ export function EquipmentFilters({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select
+        <FilterSelect
           value={categoryFilter}
           onChange={(e) => onCategoryChange(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Filter by category"
         >
           <option value="ALL">All Categories</option>
@@ -60,12 +60,11 @@ export function EquipmentFilters({
                 {c.name}
               </option>
             ))}
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value as EquipmentStatus | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Filter by status"
         >
           {STATUS_OPTIONS.map((opt) => (
@@ -73,7 +72,7 @@ export function EquipmentFilters({
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
     </div>
   )

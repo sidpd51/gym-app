@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import { LEAD_STATUS_LABELS, LEAD_SOURCE_LABELS } from '../types/lead.types'
 import type { LeadStatus, LeadSource } from '../types/lead.types'
 
@@ -53,10 +54,9 @@ export function LeadFilters({
       </div>
 
       <div className="flex gap-2">
-        <select
+        <FilterSelect
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value as LeadStatus | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Filter by status"
         >
           {STATUS_OPTIONS.map((opt) => (
@@ -64,12 +64,11 @@ export function LeadFilters({
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={sourceFilter}
           onChange={(e) => onSourceChange(e.target.value as LeadSource | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Filter by source"
         >
           {SOURCE_OPTIONS.map((opt) => (
@@ -77,7 +76,7 @@ export function LeadFilters({
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
     </div>
   )

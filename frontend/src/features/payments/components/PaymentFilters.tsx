@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import { PAYMENT_METHOD_LABELS } from '../types/payment.types'
 import type { PaymentMethod, PaymentStatus } from '../types/payment.types'
 
@@ -48,29 +49,27 @@ export function PaymentFilters({
       </div>
 
       <div className="flex gap-2">
-        <select
+        <FilterSelect
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value as PaymentStatus | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={methodFilter}
           onChange={(e) => onMethodChange(e.target.value as PaymentMethod | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {METHOD_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
     </div>
   )

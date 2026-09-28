@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import { useExpenseCategories } from '../hooks/useExpenses'
 import { EXPENSE_PAYMENT_METHOD_LABELS } from '../types/expense.types'
 import type { ExpensePaymentMethod } from '../types/expense.types'
@@ -60,10 +61,9 @@ export function ExpenseFilters({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select
+        <FilterSelect
           value={categoryFilter}
           onChange={(e) => onCategoryChange(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Filter by category"
         >
           <option value="ALL">All Categories</option>
@@ -72,12 +72,11 @@ export function ExpenseFilters({
               {c.name}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={methodFilter}
           onChange={(e) => onMethodChange(e.target.value as ExpensePaymentMethod | 'ALL')}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Filter by payment method"
         >
           {METHOD_OPTIONS.map((opt) => (
@@ -85,12 +84,11 @@ export function ExpenseFilters({
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
 
-        <select
+        <FilterSelect
           value={dateFilter}
           onChange={(e) => onDateChange(e.target.value as DateFilter)}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Filter by date"
         >
           {DATE_OPTIONS.map((opt) => (
@@ -98,7 +96,7 @@ export function ExpenseFilters({
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
     </div>
   )
