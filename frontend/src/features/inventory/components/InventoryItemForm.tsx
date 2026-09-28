@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -167,9 +168,9 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
                 htmlFor="categoryId"
                 error={errors.categoryId?.message}
               >
-                <select
+                <FormSelect
                   id="categoryId"
-                  className={inputCls(!!errors.categoryId)}
+                  error={!!errors.categoryId}
                   {...register('categoryId')}
                 >
                   <option value="">Select category…</option>
@@ -179,7 +180,7 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
                       {c.description ? ` — ${c.description}` : ''}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </Field>
             </div>
 

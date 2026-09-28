@@ -1,5 +1,6 @@
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -15,15 +16,6 @@ function inputCls(hasError: boolean) {
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
       : 'border-zinc-200 bg-white focus:ring-blue-500'
-  )
-}
-
-function selectCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2',
-    hasError
-      ? 'border-red-300 bg-red-50 text-zinc-900 focus:ring-red-400'
-      : 'border-zinc-200 bg-white text-zinc-900 focus:ring-blue-500'
   )
 }
 
@@ -166,9 +158,9 @@ export function MemberForm({ onCancel }: MemberFormProps) {
             </Field>
 
             <Field label="Gender" htmlFor="gender" error={errors.gender?.message}>
-              <select
+              <FormSelect
                 id="gender"
-                className={selectCls(!!errors.gender)}
+                error={!!errors.gender}
                 {...register('gender')}
               >
                 <option value="">Select gender</option>
@@ -177,7 +169,7 @@ export function MemberForm({ onCancel }: MemberFormProps) {
                     {g}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
           </div>
         </SectionCard>

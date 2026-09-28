@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -173,9 +174,9 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
         <SectionCard title="Lead Information">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Source" htmlFor="source" error={errors.source?.message}>
-              <select
+              <FormSelect
                 id="source"
-                className={inputCls(!!errors.source)}
+                error={!!errors.source}
                 {...register('source')}
               >
                 <option value="">Select source…</option>
@@ -184,7 +185,7 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
                     {label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
 
             <Field
@@ -192,9 +193,9 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
               htmlFor="interestedPlanId"
               error={errors.interestedPlanId?.message}
             >
-              <select
+              <FormSelect
                 id="interestedPlanId"
-                className={inputCls(!!errors.interestedPlanId)}
+                error={!!errors.interestedPlanId}
                 {...register('interestedPlanId')}
               >
                 <option value="">Select plan…</option>
@@ -203,7 +204,7 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
                     {p.name} — ₹{p.price.toLocaleString('en-IN')}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
           </div>
         </SectionCard>

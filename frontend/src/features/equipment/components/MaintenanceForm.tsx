@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -164,9 +165,9 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
               htmlFor="maintenanceType"
               error={errors.maintenanceType?.message}
             >
-              <select
+              <FormSelect
                 id="maintenanceType"
-                className={inputCls(!!errors.maintenanceType)}
+                error={!!errors.maintenanceType}
                 {...register('maintenanceType')}
               >
                 <option value="">Select type…</option>
@@ -175,7 +176,7 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
                     {label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
 
             <div className="sm:col-span-2">

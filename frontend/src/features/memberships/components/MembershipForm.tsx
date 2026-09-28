@@ -1,4 +1,5 @@
 import { useForm, Controller } from 'react-hook-form'
+import { FormSelect } from '@/components/common/FormSelect'
 import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
@@ -34,15 +35,6 @@ function formatLocalDate(dateStr: string): string {
     month: 'short',
     year: 'numeric',
   })
-}
-
-function selectCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2',
-    hasError
-      ? 'border-red-300 bg-red-50 text-zinc-900 focus:ring-red-400'
-      : 'border-zinc-200 bg-white text-zinc-900 focus:ring-blue-500'
-  )
 }
 
 interface FieldProps {
@@ -140,9 +132,9 @@ export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
                 htmlFor="planId"
                 error={errors.planId?.message}
               >
-                <select
+                <FormSelect
                   id="planId"
-                  className={selectCls(!!errors.planId)}
+                  error={!!errors.planId}
                   {...register('planId')}
                 >
                   <option value="">Select a plan</option>
@@ -152,7 +144,7 @@ export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
                       {plan.price.toLocaleString('en-IN')}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </Field>
             </div>
 

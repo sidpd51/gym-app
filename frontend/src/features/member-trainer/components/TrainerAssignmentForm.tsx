@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertTriangle } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useTrainers } from '../../trainers/hooks/useTrainers'
 import { assignTrainerSchema, type AssignTrainerFormValues } from '../schemas/member-trainer.schema'
 
@@ -13,15 +13,6 @@ function getTodayString(): string {
   const mo = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${mo}-${day}`
-}
-
-function inputCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
-    hasError
-      ? 'border-red-300 bg-red-50 focus:ring-red-400'
-      : 'border-zinc-200 bg-white focus:ring-blue-500',
-  )
 }
 
 interface TrainerAssignmentFormProps {
@@ -69,9 +60,9 @@ export function TrainerAssignmentForm({
             Trainer <span className="text-red-500">*</span>
           </label>
           <div className="mt-1">
-            <select
+            <FormSelect
               id="trainerId"
-              className={inputCls(!!errors.trainerId)}
+              error={!!errors.trainerId}
               {...register('trainerId')}
             >
               <option value="">Select a trainer…</option>
@@ -81,7 +72,7 @@ export function TrainerAssignmentForm({
                   {t.specialization ? ` — ${t.specialization}` : ''}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </div>
           {errors.trainerId && (
             <p className="mt-1 text-xs text-red-600" role="alert">

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -152,9 +153,9 @@ export function ExpenseForm({ mode, defaultValues, onCancel }: ExpenseFormProps)
                 htmlFor="categoryId"
                 error={errors.categoryId?.message}
               >
-                <select
+                <FormSelect
                   id="categoryId"
-                  className={inputCls(!!errors.categoryId)}
+                  error={!!errors.categoryId}
                   {...register('categoryId')}
                 >
                   <option value="">Select category…</option>
@@ -164,7 +165,7 @@ export function ExpenseForm({ mode, defaultValues, onCancel }: ExpenseFormProps)
                       {c.description ? ` — ${c.description}` : ''}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </Field>
             </div>
 
@@ -226,9 +227,9 @@ export function ExpenseForm({ mode, defaultValues, onCancel }: ExpenseFormProps)
                 htmlFor="paymentMethod"
                 error={errors.paymentMethod?.message}
               >
-                <select
+                <FormSelect
                   id="paymentMethod"
-                  className={inputCls(!!errors.paymentMethod)}
+                  error={!!errors.paymentMethod}
                   {...register('paymentMethod')}
                 >
                   <option value="">Select payment method…</option>
@@ -237,7 +238,7 @@ export function ExpenseForm({ mode, defaultValues, onCancel }: ExpenseFormProps)
                       {label}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </Field>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { FilterSelect } from '@/components/common/FilterSelect'
 import { getExpiringMemberships, formatExpiryDate } from '../utils/expiry.utils'
 import { EXPIRY_WINDOW_OPTIONS } from '../types/notification.types'
 import type { ExpiryWindow } from '../types/notification.types'
@@ -21,17 +22,16 @@ export function ExpiringMemberships({ onCreateReminder }: ExpiringMembershipsPro
             ? `No memberships expiring in the next ${window} days.`
             : `${memberships.length} membership${memberships.length === 1 ? '' : 's'} expiring within the selected window.`}
         </p>
-        <select
+        <FilterSelect
           value={window}
           onChange={(e) => setWindow(Number(e.target.value) as ExpiryWindow)}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {EXPIRY_WINDOW_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
+        </FilterSelect>
       </div>
 
       {memberships.length === 0 ? (

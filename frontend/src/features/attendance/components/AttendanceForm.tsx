@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, AlertTriangle } from 'lucide-react'
@@ -119,14 +120,14 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
         <label className="block text-sm font-medium text-zinc-700">
           Member <span className="text-red-500">*</span>
         </label>
-        <select {...register('memberId')} className={inputCls(!!errors.memberId)}>
+        <FormSelect error={!!errors.memberId} {...register('memberId')}>
           <option value="">Select a member…</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>
               {m.firstName} {m.lastName} ({m.memberCode})
             </option>
           ))}
-        </select>
+        </FormSelect>
         {errors.memberId && (
           <p className="text-xs text-red-500">{errors.memberId.message}</p>
         )}

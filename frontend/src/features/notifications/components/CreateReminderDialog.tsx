@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -141,9 +142,9 @@ export function CreateReminderDialog({
                   name="memberId"
                   control={control}
                   render={({ field }) => (
-                    <select
+                    <FormSelect
                       id="memberId"
-                      className={inputCls(!!errors.memberId)}
+                      error={!!errors.memberId}
                       value={field.value}
                       onChange={(e) => {
                         field.onChange(e)
@@ -156,7 +157,7 @@ export function CreateReminderDialog({
                           {m.firstName} {m.lastName}
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   )}
                 />
               </div>
@@ -173,9 +174,9 @@ export function CreateReminderDialog({
                 Membership <span className="text-red-500" aria-hidden="true">*</span>
               </label>
               <div className="mt-1">
-                <select
+                <FormSelect
                   id="membershipId"
-                  className={inputCls(!!errors.membershipId)}
+                  error={!!errors.membershipId}
                   disabled={!selectedMemberId}
                   {...register('membershipId')}
                 >
@@ -187,7 +188,7 @@ export function CreateReminderDialog({
                       {ms.planName} — {ms.status} (ends {ms.endDate})
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
               {errors.membershipId && (
                 <p className="mt-1 text-xs text-red-600" role="alert">
@@ -202,9 +203,9 @@ export function CreateReminderDialog({
                 Channel <span className="text-red-500" aria-hidden="true">*</span>
               </label>
               <div className="mt-1">
-                <select
+                <FormSelect
                   id="channel"
-                  className={inputCls(!!errors.channel)}
+                  error={!!errors.channel}
                   {...register('channel')}
                 >
                   {CHANNELS.map((ch) => (
@@ -212,7 +213,7 @@ export function CreateReminderDialog({
                       {CHANNEL_LABELS[ch]}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
             </div>
 

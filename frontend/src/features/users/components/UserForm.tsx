@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -13,15 +14,6 @@ function inputCls(hasError: boolean) {
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
       : 'border-zinc-200 bg-white focus:ring-blue-500'
-  )
-}
-
-function selectCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2',
-    hasError
-      ? 'border-red-300 bg-red-50 text-zinc-900 focus:ring-red-400'
-      : 'border-zinc-200 bg-white text-zinc-900 focus:ring-blue-500'
   )
 }
 
@@ -198,23 +190,23 @@ export function UserForm({
         <SectionCard title="Account">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Role" required htmlFor="role" error={errors.role?.message}>
-              <select id="role" className={selectCls(!!errors.role)} {...register('role')}>
+              <FormSelect id="role" error={!!errors.role} {...register('role')}>
                 {USER_ROLES.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
 
             <Field label="Status" required htmlFor="status" error={errors.status?.message}>
-              <select id="status" className={selectCls(!!errors.status)} {...register('status')}>
+              <FormSelect id="status" error={!!errors.status} {...register('status')}>
                 {USER_STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
           </div>
         </SectionCard>

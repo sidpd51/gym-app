@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -156,9 +157,9 @@ export function EquipmentForm({ mode, defaultValues, onCancel }: EquipmentFormPr
               htmlFor="categoryId"
               error={errors.categoryId?.message}
             >
-              <select
+              <FormSelect
                 id="categoryId"
-                className={inputCls(!!errors.categoryId)}
+                error={!!errors.categoryId}
                 {...register('categoryId')}
               >
                 <option value="">Select category…</option>
@@ -168,13 +169,13 @@ export function EquipmentForm({ mode, defaultValues, onCancel }: EquipmentFormPr
                     {c.description ? ` — ${c.description}` : ''}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
 
             <Field label="Status" required htmlFor="status" error={errors.status?.message}>
-              <select
+              <FormSelect
                 id="status"
-                className={inputCls(!!errors.status)}
+                error={!!errors.status}
                 {...register('status')}
               >
                 {statusOptions.map(([value, label]) => (
@@ -182,7 +183,7 @@ export function EquipmentForm({ mode, defaultValues, onCancel }: EquipmentFormPr
                     {label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
 
             <div className="sm:col-span-2">

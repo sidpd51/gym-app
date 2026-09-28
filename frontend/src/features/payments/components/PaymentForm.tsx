@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
@@ -34,15 +35,6 @@ function inputCls(hasError: boolean) {
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
       : 'border-zinc-200 bg-white focus:ring-blue-500'
-  )
-}
-
-function selectCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2',
-    hasError
-      ? 'border-red-300 bg-red-50 text-zinc-900 focus:ring-red-400'
-      : 'border-zinc-200 bg-white text-zinc-900 focus:ring-blue-500'
   )
 }
 
@@ -178,14 +170,14 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
         <SectionCard title="Member & Membership">
           <div className="space-y-4">
             <Field label="Member" required htmlFor="memberId" error={errors.memberId?.message}>
-              <select id="memberId" className={selectCls(!!errors.memberId)} {...register('memberId')}>
+              <FormSelect id="memberId" error={!!errors.memberId} {...register('memberId')}>
                 <option value="">Select a member</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.firstName} {m.lastName} — {m.memberCode}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
 
             <Field
@@ -193,9 +185,9 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
               htmlFor="membershipId"
               error={errors.membershipId?.message}
             >
-              <select
+              <FormSelect
                 id="membershipId"
-                className={selectCls(!!errors.membershipId)}
+                error={!!errors.membershipId}
                 disabled={!memberId}
                 {...register('membershipId')}
               >
@@ -211,7 +203,7 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
                     {ms.planName} — {formatLocalDate(ms.startDate)} → {formatLocalDate(ms.endDate)}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
           </div>
         </SectionCard>
@@ -245,9 +237,9 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
               htmlFor="paymentMethod"
               error={errors.paymentMethod?.message}
             >
-              <select
+              <FormSelect
                 id="paymentMethod"
-                className={selectCls(!!errors.paymentMethod)}
+                error={!!errors.paymentMethod}
                 {...register('paymentMethod')}
               >
                 <option value="">Select a method</option>
@@ -256,7 +248,7 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
 
             <Field

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -144,9 +145,9 @@ export function PreferenceSettings({ settings, onSave }: PreferenceSettingsProps
               htmlFor="dateFormat"
               error={errors.dateFormat?.message}
             >
-              <select
+              <FormSelect
                 id="dateFormat"
-                className={inputCls(!!errors.dateFormat)}
+                error={!!errors.dateFormat}
                 {...register('dateFormat')}
               >
                 {DATE_FORMAT_OPTIONS.map((opt) => (
@@ -154,7 +155,7 @@ export function PreferenceSettings({ settings, onSave }: PreferenceSettingsProps
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </Field>
           </div>
         </SectionCard>
