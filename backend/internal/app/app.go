@@ -20,6 +20,7 @@ import (
 	"github.com/sidpd51/gym-backend/internal/modules/auth"
 	"github.com/sidpd51/gym-backend/internal/modules/member"
 	"github.com/sidpd51/gym-backend/internal/modules/membership"
+	"github.com/sidpd51/gym-backend/internal/modules/payment"
 	"github.com/sidpd51/gym-backend/internal/modules/plan"
 	"github.com/sidpd51/gym-backend/internal/modules/user"
 )
@@ -45,6 +46,7 @@ func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler 
 	memberHandler := member.NewHandler(member.NewService(pool))
 	planHandler := plan.NewHandler(plan.NewService(pool))
 	membershipHandler := membership.NewHandler(membership.NewService(pool))
+	paymentHandler := payment.NewHandler(payment.NewService(pool))
 
 	cookieSecure := cfg.HTTPSCert != "" && cfg.HTTPSKey != ""
 	signer := authjwt.NewSigner(cfg.JWTSecret, cfg.SessionTTL)
@@ -82,6 +84,7 @@ func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler 
 				memberHandler.Mount(r)
 				planHandler.Mount(r)
 				membershipHandler.Mount(r)
+				paymentHandler.Mount(r)
 			})
 		})
 	})

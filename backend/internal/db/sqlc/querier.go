@@ -8,12 +8,14 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 type Querier interface {
 	CountMembers(ctx context.Context, arg CountMembersParams) (int64, error)
 	CountMembershipPlans(ctx context.Context, status *PlanStatus) (int64, error)
 	CountMemberships(ctx context.Context, arg CountMembershipsParams) (int64, error)
+	CountPayments(ctx context.Context, arg CountPaymentsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	DeleteMember(ctx context.Context, id pgtype.UUID) error
 	DeleteMembershipPlan(ctx context.Context, id pgtype.UUID) error
@@ -24,17 +26,22 @@ type Querier interface {
 	GetMemberByPhone(ctx context.Context, phone string) (Member, error)
 	GetMembershipByID(ctx context.Context, id pgtype.UUID) (Membership, error)
 	GetMembershipPlanByID(ctx context.Context, id pgtype.UUID) (MembershipPlan, error)
+	GetPaymentByID(ctx context.Context, id pgtype.UUID) (Payment, error)
 	GetUserByEmail(ctx context.Context, lower string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error)
 	InsertMembership(ctx context.Context, arg InsertMembershipParams) (Membership, error)
 	InsertMembershipPlan(ctx context.Context, arg InsertMembershipPlanParams) (MembershipPlan, error)
+	InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error)
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
 	ListMembers(ctx context.Context, arg ListMembersParams) ([]Member, error)
 	ListMembershipPlans(ctx context.Context, arg ListMembershipPlansParams) ([]MembershipPlan, error)
 	ListMemberships(ctx context.Context, arg ListMembershipsParams) ([]Membership, error)
 	ListMembershipsByMember(ctx context.Context, memberID pgtype.UUID) ([]Membership, error)
+	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
+	ListPaymentsByMember(ctx context.Context, memberID pgtype.UUID) ([]Payment, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
+	SumRevenueBetween(ctx context.Context, arg SumRevenueBetweenParams) (decimal.Decimal, error)
 	UpdateMember(ctx context.Context, arg UpdateMemberParams) (Member, error)
 	UpdateMembershipPlan(ctx context.Context, arg UpdateMembershipPlanParams) (MembershipPlan, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
