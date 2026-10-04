@@ -17,11 +17,15 @@ type Querier interface {
 	CountMembershipPlans(ctx context.Context, status *PlanStatus) (int64, error)
 	CountMemberships(ctx context.Context, arg CountMembershipsParams) (int64, error)
 	CountPayments(ctx context.Context, arg CountPaymentsParams) (int64, error)
+	CountTrainers(ctx context.Context, status *TrainerStatus) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	DeleteMember(ctx context.Context, id pgtype.UUID) error
 	DeleteMembershipPlan(ctx context.Context, id pgtype.UUID) error
+	DeleteTrainer(ctx context.Context, id pgtype.UUID) error
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
+	EndAssignment(ctx context.Context, id pgtype.UUID) error
 	ExpireOverdueMemberships(ctx context.Context) (int64, error)
+	GetActiveAssignmentForMember(ctx context.Context, memberID pgtype.UUID) (MemberTrainerAssignment, error)
 	GetActiveMembershipForMember(ctx context.Context, memberID pgtype.UUID) (Membership, error)
 	GetDBVersion(ctx context.Context) (string, error)
 	GetGymSettings(ctx context.Context) (GymSetting, error)
@@ -30,13 +34,17 @@ type Querier interface {
 	GetMembershipByID(ctx context.Context, id pgtype.UUID) (Membership, error)
 	GetMembershipPlanByID(ctx context.Context, id pgtype.UUID) (MembershipPlan, error)
 	GetPaymentByID(ctx context.Context, id pgtype.UUID) (Payment, error)
+	GetTrainerByID(ctx context.Context, id pgtype.UUID) (Trainer, error)
+	GetTrainerForMember(ctx context.Context, memberID pgtype.UUID) (GetTrainerForMemberRow, error)
 	GetUserByEmail(ctx context.Context, lower string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	InsertAssignment(ctx context.Context, arg InsertAssignmentParams) (MemberTrainerAssignment, error)
 	InsertAttendance(ctx context.Context, arg InsertAttendanceParams) (Attendance, error)
 	InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error)
 	InsertMembership(ctx context.Context, arg InsertMembershipParams) (Membership, error)
 	InsertMembershipPlan(ctx context.Context, arg InsertMembershipPlanParams) (MembershipPlan, error)
 	InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error)
+	InsertTrainer(ctx context.Context, arg InsertTrainerParams) (Trainer, error)
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
 	ListAttendance(ctx context.Context, arg ListAttendanceParams) ([]Attendance, error)
 	ListAttendanceByMember(ctx context.Context, memberID pgtype.UUID) ([]Attendance, error)
@@ -46,10 +54,12 @@ type Querier interface {
 	ListMembershipsByMember(ctx context.Context, memberID pgtype.UUID) ([]Membership, error)
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPaymentsByMember(ctx context.Context, memberID pgtype.UUID) ([]Payment, error)
+	ListTrainers(ctx context.Context, arg ListTrainersParams) ([]Trainer, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	SumRevenueBetween(ctx context.Context, arg SumRevenueBetweenParams) (decimal.Decimal, error)
 	UpdateMember(ctx context.Context, arg UpdateMemberParams) (Member, error)
 	UpdateMembershipPlan(ctx context.Context, arg UpdateMembershipPlanParams) (MembershipPlan, error)
+	UpdateTrainer(ctx context.Context, arg UpdateTrainerParams) (Trainer, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserLastLogin(ctx context.Context, id pgtype.UUID) error
 	UpdateUserPasswordHash(ctx context.Context, arg UpdateUserPasswordHashParams) error
