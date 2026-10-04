@@ -13,6 +13,7 @@ import (
 
 	"github.com/sidpd51/gym-backend/internal/app"
 	"github.com/sidpd51/gym-backend/internal/config"
+	"github.com/sidpd51/gym-backend/internal/db"
 )
 
 func main() {
@@ -25,9 +26,19 @@ func main() {
 
 	log := buildLogger(cfg)
 
+	bootCtx, bootCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	pool, err := db.NewPool(bootCtx, cfg.DatabaseURL)
+	bootCancel()
+	if err != nil {
+		log.Error("db pool init failed", slog.Any("err", err))
+		os.Exit(1)
+	}
+	defer pool.Close()
+	log.Info("db pool ready")
+
 	srv := &http.Server{
 		Addr:              ":" + strconv.Itoa(cfg.Port),
-		Handler:           app.New(cfg, log),
+		Handler:           app.New(cfg, log, pool),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

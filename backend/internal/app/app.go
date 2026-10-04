@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/sidpd51/gym-backend/internal/config"
 	appmw "github.com/sidpd51/gym-backend/internal/middleware"
@@ -15,10 +17,10 @@ import (
 
 var startTime = time.Now()
 
-// New builds the top-level chi router with stdlib chi middleware and
-// a single public /health route. No DB wiring in Phase 1.
-func New(cfg *config.Config, log *slog.Logger) http.Handler {
-	_ = cfg // config is loaded for later phases; keeps signature stable
+// New builds the top-level chi router. The DB pool is used for /health;
+// feature modules will take it as a dependency starting in Phase 4.
+func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler {
+	_ = cfg // reserved for later phases
 
 	r := chi.NewRouter()
 
@@ -26,17 +28,29 @@ func New(cfg *config.Config, log *slog.Logger) http.Handler {
 	r.Use(chimw.Recoverer)
 	r.Use(appmw.Logger(log))
 
-	r.Get("/health", healthHandler)
+	r.Get("/health", healthHandler(pool))
 
 	return r
 }
 
-func healthHandler(w http.ResponseWriter, _ *http.Request) {
-	resp := map[string]any{
-		"status": "ok",
-		"uptime": time.Since(startTime).Seconds(),
+func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		dbStatus := "ok"
+		httpStatus := http.StatusOK
+
+		pingCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := pool.Ping(pingCtx); err != nil {
+			dbStatus = "unreachable"
+			httpStatus = http.StatusInternalServerError
+		}
+
+		resp := map[string]any{
+			"status": map[string]string{"server": "ok", "db": dbStatus},
+			"uptime": time.Since(startTime).Seconds(),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(httpStatus)
+		_ = json.NewEncoder(w).Encode(resp)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(resp)
 }
