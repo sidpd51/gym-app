@@ -13,6 +13,7 @@ import (
 
 type Querier interface {
 	CountAttendance(ctx context.Context, arg CountAttendanceParams) (int64, error)
+	CountAuditLogs(ctx context.Context, arg CountAuditLogsParams) (int64, error)
 	CountEquipment(ctx context.Context, arg CountEquipmentParams) (int64, error)
 	CountExpenses(ctx context.Context, arg CountExpensesParams) (int64, error)
 	CountInventoryItems(ctx context.Context, arg CountInventoryItemsParams) (int64, error)
@@ -42,6 +43,7 @@ type Querier interface {
 	FindMembershipsExpiringWithin(ctx context.Context, dollar_1 int32) ([]FindMembershipsExpiringWithinRow, error)
 	GetActiveAssignmentForMember(ctx context.Context, memberID pgtype.UUID) (MemberTrainerAssignment, error)
 	GetActiveMembershipForMember(ctx context.Context, memberID pgtype.UUID) (Membership, error)
+	GetAuditLogByID(ctx context.Context, id pgtype.UUID) (AuditLog, error)
 	GetDBVersion(ctx context.Context) (string, error)
 	GetEquipmentByID(ctx context.Context, id pgtype.UUID) (Equipment, error)
 	GetEquipmentCategoryByID(ctx context.Context, id pgtype.UUID) (EquipmentCategory, error)
@@ -81,6 +83,7 @@ type Querier interface {
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
 	ListAttendance(ctx context.Context, arg ListAttendanceParams) ([]Attendance, error)
 	ListAttendanceByMember(ctx context.Context, memberID pgtype.UUID) ([]Attendance, error)
+	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListEquipment(ctx context.Context, arg ListEquipmentParams) ([]Equipment, error)
 	ListEquipmentCategories(ctx context.Context) ([]EquipmentCategory, error)
 	ListEquipmentMaintenance(ctx context.Context, equipmentID pgtype.UUID) ([]EquipmentMaintenance, error)
