@@ -13,6 +13,7 @@ import (
 
 type Querier interface {
 	CountAttendance(ctx context.Context, arg CountAttendanceParams) (int64, error)
+	CountEquipment(ctx context.Context, arg CountEquipmentParams) (int64, error)
 	CountExpenses(ctx context.Context, arg CountExpensesParams) (int64, error)
 	CountInventoryItems(ctx context.Context, arg CountInventoryItemsParams) (int64, error)
 	CountLeads(ctx context.Context, status *LeadStatus) (int64, error)
@@ -22,6 +23,8 @@ type Querier interface {
 	CountPayments(ctx context.Context, arg CountPaymentsParams) (int64, error)
 	CountTrainers(ctx context.Context, status *TrainerStatus) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
+	DeleteEquipment(ctx context.Context, id pgtype.UUID) error
+	DeleteEquipmentCategory(ctx context.Context, id pgtype.UUID) error
 	DeleteExpense(ctx context.Context, id pgtype.UUID) error
 	DeleteExpenseCategory(ctx context.Context, id pgtype.UUID) error
 	DeleteInventoryCategory(ctx context.Context, id pgtype.UUID) error
@@ -36,6 +39,8 @@ type Querier interface {
 	GetActiveAssignmentForMember(ctx context.Context, memberID pgtype.UUID) (MemberTrainerAssignment, error)
 	GetActiveMembershipForMember(ctx context.Context, memberID pgtype.UUID) (Membership, error)
 	GetDBVersion(ctx context.Context) (string, error)
+	GetEquipmentByID(ctx context.Context, id pgtype.UUID) (Equipment, error)
+	GetEquipmentCategoryByID(ctx context.Context, id pgtype.UUID) (EquipmentCategory, error)
 	GetExpenseByID(ctx context.Context, id pgtype.UUID) (Expense, error)
 	GetExpenseCategoryByID(ctx context.Context, id pgtype.UUID) (ExpenseCategory, error)
 	GetGymSettings(ctx context.Context) (GymSetting, error)
@@ -54,6 +59,9 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertAssignment(ctx context.Context, arg InsertAssignmentParams) (MemberTrainerAssignment, error)
 	InsertAttendance(ctx context.Context, arg InsertAttendanceParams) (Attendance, error)
+	InsertEquipment(ctx context.Context, arg InsertEquipmentParams) (Equipment, error)
+	InsertEquipmentCategory(ctx context.Context, arg InsertEquipmentCategoryParams) (EquipmentCategory, error)
+	InsertEquipmentMaintenance(ctx context.Context, arg InsertEquipmentMaintenanceParams) (EquipmentMaintenance, error)
 	InsertExpense(ctx context.Context, arg InsertExpenseParams) (Expense, error)
 	InsertExpenseCategory(ctx context.Context, arg InsertExpenseCategoryParams) (ExpenseCategory, error)
 	InsertInventoryCategory(ctx context.Context, arg InsertInventoryCategoryParams) (InventoryCategory, error)
@@ -68,6 +76,9 @@ type Querier interface {
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
 	ListAttendance(ctx context.Context, arg ListAttendanceParams) ([]Attendance, error)
 	ListAttendanceByMember(ctx context.Context, memberID pgtype.UUID) ([]Attendance, error)
+	ListEquipment(ctx context.Context, arg ListEquipmentParams) ([]Equipment, error)
+	ListEquipmentCategories(ctx context.Context) ([]EquipmentCategory, error)
+	ListEquipmentMaintenance(ctx context.Context, equipmentID pgtype.UUID) ([]EquipmentMaintenance, error)
 	ListExpenseCategories(ctx context.Context) ([]ExpenseCategory, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]Expense, error)
 	ListInventoryCategories(ctx context.Context) ([]InventoryCategory, error)
@@ -85,6 +96,8 @@ type Querier interface {
 	MarkLeadConverted(ctx context.Context, arg MarkLeadConvertedParams) error
 	SumExpensesBetween(ctx context.Context, arg SumExpensesBetweenParams) (decimal.Decimal, error)
 	SumRevenueBetween(ctx context.Context, arg SumRevenueBetweenParams) (decimal.Decimal, error)
+	UpdateEquipment(ctx context.Context, arg UpdateEquipmentParams) (Equipment, error)
+	UpdateEquipmentCategory(ctx context.Context, arg UpdateEquipmentCategoryParams) (EquipmentCategory, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
 	UpdateExpenseCategory(ctx context.Context, arg UpdateExpenseCategoryParams) (ExpenseCategory, error)
 	UpdateInventoryCategory(ctx context.Context, arg UpdateInventoryCategoryParams) (InventoryCategory, error)
