@@ -1,0 +1,85 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
+
+	"github.com/sidpd51/gym-backend/internal/app"
+	"github.com/sidpd51/gym-backend/internal/config"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		slog.New(slog.NewTextHandler(os.Stderr, nil)).
+			Error("config load failed", slog.Any("err", err))
+		os.Exit(1)
+	}
+
+	log := buildLogger(cfg)
+
+	srv := &http.Server{
+		Addr:              ":" + strconv.Itoa(cfg.Port),
+		Handler:           app.New(cfg, log),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	serverErr := make(chan error, 1)
+	go func() {
+		log.Info("server starting",
+			slog.Int("port", cfg.Port),
+			slog.String("env", cfg.Env),
+		)
+		serverErr <- srv.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Info("shutdown signal received")
+	case err := <-serverErr:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("server failed", slog.Any("err", err))
+			os.Exit(1)
+		}
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error("graceful shutdown failed", slog.Any("err", err))
+	}
+	log.Info("server stopped")
+}
+
+func buildLogger(cfg *config.Config) *slog.Logger {
+	var level slog.Level
+	switch cfg.LogLevel {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+
+	opts := &slog.HandlerOptions{Level: level}
+	var handler slog.Handler
+	if cfg.Env == "dev" {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	} else {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	}
+	return slog.New(handler)
+}
