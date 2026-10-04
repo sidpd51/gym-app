@@ -149,7 +149,8 @@ func (s *Service) Create(ctx context.Context, actor uuid.UUID, req CreateRequest
 
 // RegisterJobs wires three cron jobs on the given scheduler. Call before
 // Scheduler.RunOverdueJobs so the catch-up logic can see them.
-func RegisterJobs(sched *common.Scheduler, pool *pgxpool.Pool, log *slog.Logger) error {
+// If backupFn is nil, the daily_backup job is a no-op stub.
+func RegisterJobs(sched *common.Scheduler, pool *pgxpool.Pool, log *slog.Logger, backupFn func(ctx context.Context) error) error {
 	svc := NewService(pool)
 
 	// 00:00 IST — expire overdue memberships + persist member status drift
@@ -194,11 +195,18 @@ func RegisterJobs(sched *common.Scheduler, pool *pgxpool.Pool, log *slog.Logger)
 		return err
 	}
 
-	// 02:00 IST — daily backup placeholder (Phase 20 implements pg_dump).
-	// For now the job exists so the Intermittent Availability catch-up has
-	// something to invoke, keeping the mechanism exercised end-to-end.
+	// 02:00 IST — daily backup. If backupFn is provided, it runs pg_dump
+	// via the backup service. Idempotent by date — same-day re-runs are
+	// no-ops. Keeps the Intermittent Availability catch-up safe.
 	if err := sched.Register("daily_backup", "0 2 * * *", func(ctx context.Context, tx pgx.Tx) error {
-		log.Info("daily_backup job tick (no-op stub; see Phase 20)")
+		if backupFn == nil {
+			log.Info("daily_backup: no backup runner configured; skipping")
+			return nil
+		}
+		if err := backupFn(ctx); err != nil {
+			return err
+		}
+		log.Info("daily_backup: pg_dump complete")
 		return nil
 	}); err != nil {
 		return err

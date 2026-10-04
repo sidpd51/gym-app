@@ -16,6 +16,7 @@ import (
 	"github.com/sidpd51/gym-backend/internal/config"
 	"github.com/sidpd51/gym-backend/internal/db"
 	"github.com/sidpd51/gym-backend/internal/modules/attendance"
+	"github.com/sidpd51/gym-backend/internal/modules/backup"
 	"github.com/sidpd51/gym-backend/internal/modules/notification"
 )
 
@@ -43,7 +44,12 @@ func main() {
 	// before the HTTP server starts accepting traffic. See doc 09 §
 	// "Daily shutdown contract".
 	scheduler := common.NewScheduler(pool, log, attendance.IST)
-	if err := notification.RegisterJobs(scheduler, pool, log); err != nil {
+	backupSvc := backup.NewService(cfg.BackupDir, cfg.DatabaseURL)
+	dailyBackupFn := func(ctx context.Context) error {
+		_, err := backupSvc.Create(ctx, true) // idempotent by date
+		return err
+	}
+	if err := notification.RegisterJobs(scheduler, pool, log, dailyBackupFn); err != nil {
 		log.Error("register scheduled jobs failed", slog.Any("err", err))
 		os.Exit(1)
 	}
