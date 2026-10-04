@@ -15,11 +15,13 @@ sql:
         emit_empty_slices: true
         emit_exact_table_names: false
         emit_db_tags: false
-        emit_result_struct_pointers: false
-        emit_params_struct_pointers: false
         overrides:
-          - db_type: "numeric"
-            go_type: "github.com/shopspring/decimal.Decimal"
-          - db_type: "numeric"
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+          - db_type: "pg_catalog.numeric"
             nullable: true
-            go_type: "github.com/shopspring/decimal.NullDecimal"
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "NullDecimal"

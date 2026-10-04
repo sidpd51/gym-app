@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 type AssignmentStatus string
@@ -1087,20 +1088,20 @@ type AuditLog struct {
 }
 
 type Equipment struct {
-	ID            pgtype.UUID        `json:"id"`
-	EquipmentCode string             `json:"equipment_code"`
-	Name          string             `json:"name"`
-	CategoryID    pgtype.UUID        `json:"category_id"`
-	Brand         *string            `json:"brand"`
-	Model         *string            `json:"model"`
-	SerialNumber  *string            `json:"serial_number"`
-	PurchaseDate  pgtype.Date        `json:"purchase_date"`
-	PurchaseCost  pgtype.Numeric     `json:"purchase_cost"`
-	Location      *string            `json:"location"`
-	Status        EquipmentStatus    `json:"status"`
-	Notes         *string            `json:"notes"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID            pgtype.UUID         `json:"id"`
+	EquipmentCode string              `json:"equipment_code"`
+	Name          string              `json:"name"`
+	CategoryID    pgtype.UUID         `json:"category_id"`
+	Brand         *string             `json:"brand"`
+	Model         *string             `json:"model"`
+	SerialNumber  *string             `json:"serial_number"`
+	PurchaseDate  pgtype.Date         `json:"purchase_date"`
+	PurchaseCost  decimal.NullDecimal `json:"purchase_cost"`
+	Location      *string             `json:"location"`
+	Status        EquipmentStatus     `json:"status"`
+	Notes         *string             `json:"notes"`
+	CreatedAt     pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz  `json:"updated_at"`
 }
 
 type EquipmentCategory struct {
@@ -1111,16 +1112,16 @@ type EquipmentCategory struct {
 }
 
 type EquipmentMaintenance struct {
-	ID                  pgtype.UUID        `json:"id"`
-	EquipmentID         pgtype.UUID        `json:"equipment_id"`
-	MaintenanceDate     pgtype.Date        `json:"maintenance_date"`
-	MaintenanceType     MaintenanceType    `json:"maintenance_type"`
-	Description         string             `json:"description"`
-	Cost                pgtype.Numeric     `json:"cost"`
-	PerformedBy         *string            `json:"performed_by"`
-	NextMaintenanceDate pgtype.Date        `json:"next_maintenance_date"`
-	Notes               *string            `json:"notes"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	ID                  pgtype.UUID         `json:"id"`
+	EquipmentID         pgtype.UUID         `json:"equipment_id"`
+	MaintenanceDate     pgtype.Date         `json:"maintenance_date"`
+	MaintenanceType     MaintenanceType     `json:"maintenance_type"`
+	Description         string              `json:"description"`
+	Cost                decimal.NullDecimal `json:"cost"`
+	PerformedBy         *string             `json:"performed_by"`
+	NextMaintenanceDate pgtype.Date         `json:"next_maintenance_date"`
+	Notes               *string             `json:"notes"`
+	CreatedAt           pgtype.Timestamptz  `json:"created_at"`
 }
 
 type Expense struct {
@@ -1128,7 +1129,7 @@ type Expense struct {
 	ExpenseCode   string               `json:"expense_code"`
 	CategoryID    pgtype.UUID          `json:"category_id"`
 	Description   string               `json:"description"`
-	Amount        pgtype.Numeric       `json:"amount"`
+	Amount        decimal.Decimal      `json:"amount"`
 	ExpenseDate   pgtype.Date          `json:"expense_date"`
 	PaymentMethod ExpensePaymentMethod `json:"payment_method"`
 	Vendor        *string              `json:"vendor"`
@@ -1242,7 +1243,7 @@ type Membership struct {
 	PlanName  string             `json:"plan_name"`
 	StartDate pgtype.Date        `json:"start_date"`
 	EndDate   pgtype.Date        `json:"end_date"`
-	Amount    pgtype.Numeric     `json:"amount"`
+	Amount    decimal.Decimal    `json:"amount"`
 	Status    MembershipStatus   `json:"status"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
@@ -1252,7 +1253,7 @@ type MembershipPlan struct {
 	Name           string             `json:"name"`
 	Description    *string            `json:"description"`
 	DurationInDays int32              `json:"duration_in_days"`
-	Price          pgtype.Numeric     `json:"price"`
+	Price          decimal.Decimal    `json:"price"`
 	Status         PlanStatus         `json:"status"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
@@ -1273,7 +1274,7 @@ type Payment struct {
 	ID            pgtype.UUID        `json:"id"`
 	MemberID      pgtype.UUID        `json:"member_id"`
 	MembershipID  pgtype.UUID        `json:"membership_id"`
-	Amount        pgtype.Numeric     `json:"amount"`
+	Amount        decimal.Decimal    `json:"amount"`
 	PaymentMethod PaymentMethod      `json:"payment_method"`
 	PaymentDate   pgtype.Date        `json:"payment_date"`
 	Status        PaymentStatus      `json:"status"`

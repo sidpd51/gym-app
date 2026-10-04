@@ -25,6 +25,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
