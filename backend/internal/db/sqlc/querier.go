@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	CountAttendance(ctx context.Context, arg CountAttendanceParams) (int64, error)
 	CountMembers(ctx context.Context, arg CountMembersParams) (int64, error)
 	CountMembershipPlans(ctx context.Context, status *PlanStatus) (int64, error)
 	CountMemberships(ctx context.Context, arg CountMembershipsParams) (int64, error)
@@ -21,7 +22,9 @@ type Querier interface {
 	DeleteMembershipPlan(ctx context.Context, id pgtype.UUID) error
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	ExpireOverdueMemberships(ctx context.Context) (int64, error)
+	GetActiveMembershipForMember(ctx context.Context, memberID pgtype.UUID) (Membership, error)
 	GetDBVersion(ctx context.Context) (string, error)
+	GetGymSettings(ctx context.Context) (GymSetting, error)
 	GetMemberByID(ctx context.Context, id pgtype.UUID) (Member, error)
 	GetMemberByPhone(ctx context.Context, phone string) (Member, error)
 	GetMembershipByID(ctx context.Context, id pgtype.UUID) (Membership, error)
@@ -29,11 +32,14 @@ type Querier interface {
 	GetPaymentByID(ctx context.Context, id pgtype.UUID) (Payment, error)
 	GetUserByEmail(ctx context.Context, lower string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	InsertAttendance(ctx context.Context, arg InsertAttendanceParams) (Attendance, error)
 	InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error)
 	InsertMembership(ctx context.Context, arg InsertMembershipParams) (Membership, error)
 	InsertMembershipPlan(ctx context.Context, arg InsertMembershipPlanParams) (MembershipPlan, error)
 	InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error)
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
+	ListAttendance(ctx context.Context, arg ListAttendanceParams) ([]Attendance, error)
+	ListAttendanceByMember(ctx context.Context, memberID pgtype.UUID) ([]Attendance, error)
 	ListMembers(ctx context.Context, arg ListMembersParams) ([]Member, error)
 	ListMembershipPlans(ctx context.Context, arg ListMembershipPlansParams) ([]MembershipPlan, error)
 	ListMemberships(ctx context.Context, arg ListMembershipsParams) ([]Membership, error)

@@ -19,6 +19,7 @@ import (
 	appmw "github.com/sidpd51/gym-backend/internal/middleware"
 	"github.com/sidpd51/gym-backend/internal/modules/auth"
 	"github.com/sidpd51/gym-backend/internal/modules/member"
+	"github.com/sidpd51/gym-backend/internal/modules/attendance"
 	"github.com/sidpd51/gym-backend/internal/modules/membership"
 	"github.com/sidpd51/gym-backend/internal/modules/payment"
 	"github.com/sidpd51/gym-backend/internal/modules/plan"
@@ -47,6 +48,7 @@ func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler 
 	planHandler := plan.NewHandler(plan.NewService(pool))
 	membershipHandler := membership.NewHandler(membership.NewService(pool))
 	paymentHandler := payment.NewHandler(payment.NewService(pool))
+	attendanceHandler := attendance.NewHandler(attendance.NewService(pool))
 
 	cookieSecure := cfg.HTTPSCert != "" && cfg.HTTPSKey != ""
 	signer := authjwt.NewSigner(cfg.JWTSecret, cfg.SessionTTL)
@@ -85,6 +87,7 @@ func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler 
 				planHandler.Mount(r)
 				membershipHandler.Mount(r)
 				paymentHandler.Mount(r)
+				attendanceHandler.Mount(r)
 			})
 		})
 	})
