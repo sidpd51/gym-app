@@ -112,6 +112,7 @@ type Querier interface {
 	UpdateEquipmentCategory(ctx context.Context, arg UpdateEquipmentCategoryParams) (EquipmentCategory, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
 	UpdateExpenseCategory(ctx context.Context, arg UpdateExpenseCategoryParams) (ExpenseCategory, error)
+	UpdateGymSettings(ctx context.Context, arg UpdateGymSettingsParams) (GymSetting, error)
 	UpdateInventoryCategory(ctx context.Context, arg UpdateInventoryCategoryParams) (InventoryCategory, error)
 	UpdateInventoryItem(ctx context.Context, arg UpdateInventoryItemParams) (InventoryItem, error)
 	UpdateInventoryItemStock(ctx context.Context, arg UpdateInventoryItemStockParams) error
