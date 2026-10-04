@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/sidpd51/gym-backend/internal/authjwt"
 	"github.com/sidpd51/gym-backend/internal/common"
 	"github.com/sidpd51/gym-backend/internal/common/render"
 )
@@ -24,21 +25,20 @@ type Actor struct {
 }
 
 // WithActor returns a copy of ctx carrying the given actor. Primarily used
-// by tests and by RequireAuth once JWT verification is in place.
+// by tests and by RequireAuth once JWT verification succeeds.
 func WithActor(ctx context.Context, a Actor) context.Context {
 	return context.WithValue(ctx, ctxActor, a)
 }
 
 // UserFromContext extracts the actor from the request context. The second
-// return value is false when no actor is set (e.g. a public route or a
-// request that bypassed RequireAuth).
+// return value is false when no actor is set.
 func UserFromContext(ctx context.Context) (Actor, bool) {
 	a, ok := ctx.Value(ctxActor).(Actor)
 	return a, ok
 }
 
-// ActorID returns the authenticated user's UUID, or the zero UUID if no
-// actor is on the context. Convenience for audit logging call sites.
+// ActorID returns the authenticated user's UUID, or uuid.Nil if no actor is
+// on the context. Convenience for audit-log call sites.
 func ActorID(ctx context.Context) uuid.UUID {
 	if a, ok := UserFromContext(ctx); ok {
 		return a.UserID
@@ -46,22 +46,44 @@ func ActorID(ctx context.Context) uuid.UUID {
 	return uuid.Nil
 }
 
-// RequireAuth is the middleware that gates authenticated routes. In Phase 4
-// it will verify a JWT cookie and populate the context via WithActor. In
-// Phase 3 it is a stub that rejects every request so that nothing wires up
-// around a half-built login flow by accident.
-func RequireAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		render.Error(w, r, common.NewUnauthenticatedError(
-			"AUTH_REQUIRED",
-			"Authentication required.",
-		))
-	})
+// RequireAuth verifies the session JWT cookie and populates the actor on
+// the request context before dispatching to `next`. Missing, malformed, or
+// expired cookies produce a 401.
+func RequireAuth(signer *authjwt.Signer) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(authjwt.SessionCookieName)
+			if err != nil || cookie.Value == "" {
+				render.Error(w, r, common.NewUnauthenticatedError(
+					"AUTH_REQUIRED",
+					"Authentication required.",
+				))
+				return
+			}
+			claims, err := signer.Verify(cookie.Value)
+			if err != nil {
+				render.Error(w, r, common.NewUnauthenticatedError(
+					"AUTH_INVALID_SESSION",
+					"Your session is invalid or has expired.",
+				))
+				return
+			}
+			uid, err := uuid.Parse(claims.Subject)
+			if err != nil {
+				render.Error(w, r, common.NewUnauthenticatedError(
+					"AUTH_INVALID_SESSION",
+					"Your session is invalid.",
+				))
+				return
+			}
+			ctx := WithActor(r.Context(), Actor{UserID: uid, Role: claims.Role})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 // RequirePermission is middleware that denies the request unless the
-// authenticated actor's role grants the given permission. It is composed
-// after RequireAuth on the route group.
+// authenticated actor's role grants the given permission.
 func RequirePermission(perm common.Permission) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

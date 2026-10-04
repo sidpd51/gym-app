@@ -6,10 +6,22 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
+	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	GetDBVersion(ctx context.Context) (string, error)
+	GetUserByEmail(ctx context.Context, lower string) (User, error)
+	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserLastLogin(ctx context.Context, id pgtype.UUID) error
+	UpdateUserPasswordHash(ctx context.Context, arg UpdateUserPasswordHashParams) error
+	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

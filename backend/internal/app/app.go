@@ -9,28 +9,98 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"github.com/gorilla/csrf"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/sidpd51/gym-backend/internal/authjwt"
 	"github.com/sidpd51/gym-backend/internal/config"
 	appmw "github.com/sidpd51/gym-backend/internal/middleware"
+	"github.com/sidpd51/gym-backend/internal/modules/auth"
+	"github.com/sidpd51/gym-backend/internal/modules/user"
 )
 
 var startTime = time.Now()
 
-// New builds the top-level chi router. The DB pool is used for /health;
-// feature modules will take it as a dependency starting in Phase 4.
+// New builds the top-level chi router with all middleware and routes wired.
 func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler {
-	_ = cfg // reserved for later phases
-
 	r := chi.NewRouter()
 
 	r.Use(chimw.RealIP)
-	r.Use(chimw.Recoverer)
+	r.Use(appmw.Recoverer(log))
 	r.Use(appmw.Logger(log))
+	r.Use(buildCORS(cfg))
 
 	r.Get("/health", healthHandler(pool))
 
+	// --- feature wiring -----------------------------------------------------
+	userRepo := user.NewRepository(pool)
+	userSvc := user.NewService(userRepo)
+	userHandler := user.NewHandler(userSvc)
+
+	cookieSecure := cfg.HTTPSCert != "" && cfg.HTTPSKey != ""
+	signer := authjwt.NewSigner(cfg.JWTSecret, cfg.SessionTTL)
+	authHandler := auth.NewHandler(userSvc, signer, cookieSecure)
+
+	// CSRF middleware uses the first 32 bytes of CookieSecret as its key.
+	// Mounted inside /api/v1 so static/health routes stay unaffected.
+	csrfKey := deriveCSRFKey(cfg.CookieSecret)
+
+	r.Route("/api/v1", func(r chi.Router) {
+		// Login/logout live outside CSRF: there is no session yet on login,
+		// and logout only clears a cookie.
+		authHandler.MountPublic(r)
+
+		// Everything else is CSRF-protected and uses TrustedOrigins so a
+		// same-origin browser request with proper Origin header passes.
+		r.Group(func(r chi.Router) {
+			r.Use(csrf.Protect(
+				csrfKey,
+				csrf.CookieName("gym_csrf"),
+				csrf.Path("/"),
+				csrf.HttpOnly(true),
+				csrf.Secure(cookieSecure),
+				csrf.SameSite(csrf.SameSiteStrictMode),
+				csrf.TrustedOrigins([]string{cfg.FrontendOrigin}),
+			))
+
+			// /auth/me, /auth/profile, /csrf-token
+			authHandler.MountProtected(r)
+
+			// Authenticated feature routes
+			r.Group(func(r chi.Router) {
+				r.Use(appmw.RequireAuth(signer))
+				userHandler.Mount(r)
+			})
+		})
+	})
+
 	return r
+}
+
+func buildCORS(cfg *config.Config) func(http.Handler) http.Handler {
+	return cors.Handler(cors.Options{
+		AllowedOrigins:   []string{cfg.FrontendOrigin},
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"X-CSRF-Token"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	})
+}
+
+// deriveCSRFKey returns a 32-byte key for gorilla/csrf. The input secret is
+// expected to be at least 32 characters (enforced by the deployment doc).
+func deriveCSRFKey(secret string) []byte {
+	b := []byte(secret)
+	if len(b) >= 32 {
+		return b[:32]
+	}
+	// Pad short secrets so dev doesn't crash; production .env is validated
+	// by the deployment doc requirements.
+	padded := make([]byte, 32)
+	copy(padded, b)
+	return padded
 }
 
 func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
