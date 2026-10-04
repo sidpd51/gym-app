@@ -13,6 +13,7 @@ import (
 
 type Querier interface {
 	CountAttendance(ctx context.Context, arg CountAttendanceParams) (int64, error)
+	CountExpenses(ctx context.Context, arg CountExpensesParams) (int64, error)
 	CountLeads(ctx context.Context, status *LeadStatus) (int64, error)
 	CountMembers(ctx context.Context, arg CountMembersParams) (int64, error)
 	CountMembershipPlans(ctx context.Context, status *PlanStatus) (int64, error)
@@ -20,6 +21,8 @@ type Querier interface {
 	CountPayments(ctx context.Context, arg CountPaymentsParams) (int64, error)
 	CountTrainers(ctx context.Context, status *TrainerStatus) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
+	DeleteExpense(ctx context.Context, id pgtype.UUID) error
+	DeleteExpenseCategory(ctx context.Context, id pgtype.UUID) error
 	DeleteLead(ctx context.Context, id pgtype.UUID) error
 	DeleteMember(ctx context.Context, id pgtype.UUID) error
 	DeleteMembershipPlan(ctx context.Context, id pgtype.UUID) error
@@ -30,6 +33,8 @@ type Querier interface {
 	GetActiveAssignmentForMember(ctx context.Context, memberID pgtype.UUID) (MemberTrainerAssignment, error)
 	GetActiveMembershipForMember(ctx context.Context, memberID pgtype.UUID) (Membership, error)
 	GetDBVersion(ctx context.Context) (string, error)
+	GetExpenseByID(ctx context.Context, id pgtype.UUID) (Expense, error)
+	GetExpenseCategoryByID(ctx context.Context, id pgtype.UUID) (ExpenseCategory, error)
 	GetGymSettings(ctx context.Context) (GymSetting, error)
 	GetLeadByID(ctx context.Context, id pgtype.UUID) (Lead, error)
 	GetMemberByID(ctx context.Context, id pgtype.UUID) (Member, error)
@@ -43,6 +48,8 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertAssignment(ctx context.Context, arg InsertAssignmentParams) (MemberTrainerAssignment, error)
 	InsertAttendance(ctx context.Context, arg InsertAttendanceParams) (Attendance, error)
+	InsertExpense(ctx context.Context, arg InsertExpenseParams) (Expense, error)
+	InsertExpenseCategory(ctx context.Context, arg InsertExpenseCategoryParams) (ExpenseCategory, error)
 	InsertLead(ctx context.Context, arg InsertLeadParams) (Lead, error)
 	InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error)
 	InsertMembership(ctx context.Context, arg InsertMembershipParams) (Membership, error)
@@ -52,6 +59,8 @@ type Querier interface {
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
 	ListAttendance(ctx context.Context, arg ListAttendanceParams) ([]Attendance, error)
 	ListAttendanceByMember(ctx context.Context, memberID pgtype.UUID) ([]Attendance, error)
+	ListExpenseCategories(ctx context.Context) ([]ExpenseCategory, error)
+	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]Expense, error)
 	ListLeads(ctx context.Context, arg ListLeadsParams) ([]Lead, error)
 	ListMembers(ctx context.Context, arg ListMembersParams) ([]Member, error)
 	ListMembershipPlans(ctx context.Context, arg ListMembershipPlansParams) ([]MembershipPlan, error)
@@ -62,7 +71,10 @@ type Querier interface {
 	ListTrainers(ctx context.Context, arg ListTrainersParams) ([]Trainer, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	MarkLeadConverted(ctx context.Context, arg MarkLeadConvertedParams) error
+	SumExpensesBetween(ctx context.Context, arg SumExpensesBetweenParams) (decimal.Decimal, error)
 	SumRevenueBetween(ctx context.Context, arg SumRevenueBetweenParams) (decimal.Decimal, error)
+	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
+	UpdateExpenseCategory(ctx context.Context, arg UpdateExpenseCategoryParams) (ExpenseCategory, error)
 	UpdateLead(ctx context.Context, arg UpdateLeadParams) (Lead, error)
 	UpdateMember(ctx context.Context, arg UpdateMemberParams) (Member, error)
 	UpdateMembershipPlan(ctx context.Context, arg UpdateMembershipPlanParams) (MembershipPlan, error)
