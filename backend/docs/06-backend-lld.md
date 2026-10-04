@@ -4,13 +4,13 @@
 
 | Layer | Technology |
 |---|---|
-| Language | Java |
-| Framework | Spring Boot |
-| Persistence | Spring Data JPA / Hibernate |
-| Validation | Jakarta Bean Validation (spring-boot-starter-validation) |
-| Security | Spring Security |
-| Scheduler | Spring `@Scheduled` |
-| Build | **OPEN DECISION** (Maven or Gradle) |
+| Language | Go 1.23+ |
+| HTTP router | chi (`go-chi/chi/v5`) |
+| Persistence | pgx v5 (`jackc/pgx/v5`) + sqlc generated queries |
+| Validation | `go-playground/validator/v10` |
+| Auth | `golang-jwt/jwt/v5` JWT via httpOnly cookie + `gorilla/csrf` |
+| Scheduler | `robfig/cron/v3` |
+| Build | `go build -o gym-backend ./cmd/server` → single static binary |
 
 ---
 
@@ -18,273 +18,174 @@
 
 ### Strategy: Package-by-Feature
 
-The backend uses **package-by-feature** rather than package-by-layer.
+The backend uses **package-by-feature** under `internal/modules/`.
 
-**Why:** A package-by-layer layout (e.g., top-level `controller/`, `service/`, `repository/` containing all controllers/services) puts unrelated code together and related code apart. For a modular monolith, package-by-feature keeps all classes for a single domain concern in one place — making each feature independently understandable.
+**Why:** A package-by-layer layout (top-level `handlers/`, `services/`, `repositories/`) puts unrelated code together and related code apart. For a modular monolith, package-by-feature keeps all code for a single domain in one package — making each feature independently understandable. The Go `internal/` directory prevents external import, which enforces the module boundary at the compiler level.
 
 ```
-com.fitzone.gym
+backend/
 │
-├── GymApplication.java                    ← @SpringBootApplication, main entry point
+├── cmd/
+│   └── server/
+│       └── main.go                   ← entry: Load config, build app, http.ListenAndServe
 │
-├── common/                                ← shared infrastructure; no domain logic
-│   ├── audit/
-│   │   ├── AuditService.java
-│   │   ├── AuditAction.java               ← enum
-│   │   └── AuditEntityType.java           ← enum
-│   ├── codegen/
-│   │   └── CodeGenerator.java             ← USR-001, MEM-001, etc.
+├── internal/
+│   ├── app/
+│   │   └── app.go                    ← builds chi.Router with all routes + middleware
+│   │
 │   ├── config/
-│   │   ├── SecurityConfig.java            ← SecurityFilterChain bean
-│   │   ├── WebMvcConfig.java              ← CORS, static resources
-│   │   └── SchedulerConfig.java           ← task executor config
-│   ├── exception/
-│   │   ├── AppException.java              ← base runtime exception
-│   │   ├── NotFoundException.java
-│   │   ├── ConflictException.java
-│   │   ├── ForbiddenException.java
-│   │   └── GlobalExceptionHandler.java    ← @RestControllerAdvice
-│   ├── pagination/
-│   │   ├── PageResponse.java              ← generic paginated response wrapper
-│   │   └── PaginationUtils.java
-│   ├── response/
-│   │   └── ApiError.java                  ← standard error response DTO
-│   └── security/
-│       ├── GymUserPrincipal.java          ← UserDetails impl
-│       ├── UserDetailsServiceImpl.java    ← UserDetailsService impl
-│       └── RolePermissions.java           ← role → permissions map
+│   │   └── config.go                 ← env-parsed Config struct (caarlos0/env)
+│   │
+│   ├── db/
+│   │   ├── db.go                     ← pgxpool.New(ctx, DATABASE_URL)
+│   │   ├── migrations/               ← goose SQL migrations
+│   │   │   ├── 001_init.sql
+│   │   │   ├── 002_seed_settings.sql
+│   │   │   └── 003_code_sequences.sql
+│   │   ├── queries/                  ← sqlc INPUT SQL
+│   │   │   ├── users.sql
+│   │   │   ├── members.sql
+│   │   │   ├── memberships.sql
+│   │   │   └── ... (one file per module)
+│   │   └── sqlc/                     ← sqlc GENERATED Go (do not edit)
+│   │       ├── models.go
+│   │       ├── users.sql.go
+│   │       ├── members.sql.go
+│   │       └── ...
+│   │
+│   ├── middleware/
+│   │   ├── auth.go                   ← RequireAuth; RequirePermission(perm) composer; ActorID helper
+│   │   ├── logger.go                 ← slog request logger
+│   │   ├── csrf.go                   ← gorilla/csrf wrapper
+│   │   ├── cors.go                   ← CORS wrapper
+│   │   └── errorhandler.go           ← recoverer + AppError → JSON
+│   │
+│   ├── common/                       ← shared infrastructure; no domain logic
+│   │   ├── errors.go                 ← AppError, constructors, HTTPStatus accessor
+│   │   ├── render/                   ← render.JSON, render.Error, render.ValidationError
+│   │   ├── pagination.go             ← PageResponse[T], PageMeta, ParsePageQuery
+│   │   ├── codegen.go                ← NextMemberCode(ctx, tx), NextUserCode, ...
+│   │   ├── audit.go                  ← AuditLog(ctx, tx, entry), AuditEntry struct
+│   │   ├── permissions.go            ← Role → []Permission map (mirrors frontend)
+│   │   └── scheduler.go              ← cron.Cron wrapper + RunOverdueJobs helper
+│   │
+│   └── modules/
+│       ├── auth/
+│       │   ├── handler.go            ← /login, /logout, /me, /profile
+│       │   ├── service.go            ← Login(ctx, email, password), ...
+│       │   └── dto.go                ← LoginRequest, AuthUserResponse
+│       │
+│       ├── user/
+│       │   ├── handler.go
+│       │   ├── service.go
+│       │   ├── repository.go         ← wraps sqlc.Queries
+│       │   └── dto.go
+│       │
+│       ├── member/
+│       │   ├── handler.go
+│       │   ├── service.go
+│       │   ├── repository.go
+│       │   └── dto.go                ← CreateMemberRequest, UpdateMemberRequest,
+│       │                                MemberListItemResponse, MemberDetailResponse
+│       │
+│       ├── membershipplan/
+│       ├── membership/
+│       ├── payment/
+│       ├── attendance/
+│       ├── trainer/
+│       ├── assignment/               ← nested under /members/:id/trainer
+│       ├── lead/
+│       ├── expense/
+│       ├── inventory/
+│       ├── equipment/
+│       ├── notification/
+│       │   ├── handler.go
+│       │   ├── service.go
+│       │   ├── repository.go
+│       │   ├── jobs.go               ← ExpireMemberships, SendExpiryNotifications
+│       │   └── dto.go
+│       ├── report/
+│       │   ├── handler.go
+│       │   ├── service.go
+│       │   └── repository.go         ← read-only aggregation queries
+│       ├── settings/
+│       ├── auditlog/                 ← read-only
+│       ├── search/
+│       └── backup/
+│           ├── handler.go
+│           └── service.go            ← invokes pg_dump via os/exec
 │
-├── auth/
-│   ├── AuthController.java
-│   ├── AuthService.java
-│   └── dto/
-│       ├── LoginRequest.java
-│       └── AuthUserResponse.java
-│
-├── user/
-│   ├── UserController.java
-│   ├── UserService.java
-│   ├── UserRepository.java
-│   ├── User.java                          ← @Entity
-│   ├── UserRole.java                      ← @Enumerated enum
-│   ├── UserStatus.java                    ← @Enumerated enum
-│   └── dto/
-│       ├── CreateUserRequest.java
-│       ├── UpdateUserRequest.java
-│       └── UserResponse.java
-│
-├── member/
-│   ├── MemberController.java
-│   ├── MemberService.java
-│   ├── MemberRepository.java
-│   ├── Member.java                        ← @Entity
-│   ├── MemberStatus.java
-│   └── dto/
-│       ├── CreateMemberRequest.java
-│       ├── UpdateMemberRequest.java
-│       ├── MemberListItemResponse.java    ← list view (less data)
-│       ├── MemberDetailResponse.java      ← full detail view
-│       └── MemberSupplementalResponse.java
-│
-├── membershipplan/
-│   ├── MembershipPlanController.java
-│   ├── MembershipPlanService.java
-│   ├── MembershipPlanRepository.java
-│   ├── MembershipPlan.java
-│   ├── PlanStatus.java
-│   └── dto/
-│       ├── CreateMembershipPlanRequest.java
-│       ├── UpdateMembershipPlanRequest.java
-│       └── MembershipPlanResponse.java
-│
-├── membership/
-│   ├── MembershipController.java
-│   ├── MembershipService.java
-│   ├── MembershipRepository.java
-│   ├── Membership.java
-│   ├── MembershipStatus.java
-│   └── dto/
-│       ├── CreateMembershipRequest.java
-│       └── MembershipResponse.java
-│
-├── payment/
-│   ├── PaymentController.java
-│   ├── PaymentService.java
-│   ├── PaymentRepository.java
-│   ├── Payment.java
-│   ├── PaymentMethod.java
-│   ├── PaymentStatus.java
-│   └── dto/
-│       ├── RecordPaymentRequest.java
-│       └── PaymentResponse.java
-│
-├── attendance/
-│   ├── AttendanceController.java
-│   ├── AttendanceService.java
-│   ├── AttendanceRepository.java
-│   ├── Attendance.java
-│   └── dto/
-│       ├── MarkAttendanceRequest.java
-│       └── AttendanceResponse.java
-│
-├── trainer/
-│   ├── TrainerController.java
-│   ├── TrainerService.java
-│   ├── TrainerRepository.java
-│   ├── Trainer.java
-│   ├── TrainerStatus.java
-│   └── dto/...
-│
-├── assignment/
-│   ├── AssignmentController.java          ← nested under /members/:id/trainer
-│   ├── AssignmentService.java
-│   ├── AssignmentRepository.java
-│   ├── MemberTrainerAssignment.java
-│   ├── AssignmentStatus.java
-│   └── dto/...
-│
-├── lead/
-│   ├── LeadController.java
-│   ├── LeadService.java
-│   ├── LeadRepository.java
-│   ├── Lead.java
-│   ├── LeadStatus.java
-│   ├── LeadSource.java
-│   └── dto/...
-│
-├── expense/
-│   ├── ExpenseController.java
-│   ├── ExpenseCategoryController.java
-│   ├── ExpenseService.java
-│   ├── ExpenseRepository.java
-│   ├── ExpenseCategoryRepository.java
-│   ├── Expense.java
-│   ├── ExpenseCategory.java
-│   └── dto/...
-│
-├── inventory/
-│   ├── InventoryController.java
-│   ├── InventoryService.java
-│   ├── InventoryRepository.java
-│   ├── InventoryTransactionRepository.java
-│   ├── InventoryItem.java
-│   ├── InventoryTransaction.java
-│   ├── InventoryStatus.java
-│   ├── InventoryTransactionType.java
-│   └── dto/...
-│
-├── equipment/
-│   ├── EquipmentController.java
-│   ├── EquipmentService.java
-│   ├── EquipmentRepository.java
-│   ├── EquipmentMaintenanceRepository.java
-│   ├── Equipment.java
-│   ├── EquipmentMaintenance.java
-│   ├── EquipmentStatus.java
-│   ├── MaintenanceType.java
-│   └── dto/...
-│
-├── notification/
-│   ├── NotificationController.java
-│   ├── NotificationService.java
-│   ├── NotificationRepository.java
-│   ├── NotificationRecord.java
-│   ├── NotificationType.java
-│   ├── NotificationChannel.java
-│   ├── NotificationStatus.java
-│   ├── NotificationScheduler.java         ← @Scheduled expiry jobs
-│   └── dto/...
-│
-├── report/
-│   ├── ReportController.java
-│   ├── ReportService.java
-│   ├── ReportRepository.java              ← read-only aggregation queries
-│   └── dto/...
-│
-├── settings/
-│   ├── SettingsController.java
-│   ├── SettingsService.java
-│   ├── SettingsRepository.java
-│   ├── GymSettings.java
-│   └── dto/...
-│
-├── auditlog/
-│   ├── AuditLogController.java            ← read-only
-│   ├── AuditLogRepository.java
-│   ├── AuditLog.java
-│   └── dto/...
-│
-├── search/
-│   ├── SearchController.java
-│   ├── SearchService.java
-│   └── dto/...
-│
-└── backup/
-    ├── BackupController.java
-    └── BackupService.java
+├── sqlc.yaml
+├── go.mod
+├── go.sum
+├── .env.example
+└── .gitignore
 ```
 
 ---
 
 ## Layer Responsibilities
 
-### @RestController
+### Handler (`handler.go`)
 
-- Handles HTTP: parses path variables, query params, request body.
-- Calls the service method with a request DTO.
-- Returns `ResponseEntity<T>` with the appropriate status code.
-- **No business logic**.
-- **No direct repository calls**.
-- Annotates methods with `@PreAuthorize` for permission enforcement.
+- Declares a `Routes() chi.Router` method that composes middleware (`RequireAuth`, `RequirePermission`) and routes.
+- Decodes JSON into a request DTO.
+- Runs struct-tag validation (`validator.Struct(&req)`).
+- Reads actor ID from context (`middleware.ActorID(r.Context())`).
+- Calls the service method.
+- Encodes the response via `render.JSON(w, status, body)` or errors via `render.Error(w, err)`.
+- **No business logic.**
+- **No direct repository calls.**
 
-### @Service
+### Service (`service.go`)
 
 - Contains all business logic, domain rules, and workflow orchestration.
-- Manages database transactions with `@Transactional`.
-- Calls repository methods and maps entities to response DTOs.
-- Calls `AuditService` to record significant actions.
-- Throws domain exceptions (`NotFoundException`, `ConflictException`, etc.).
+- Takes `context.Context` as the first argument and propagates it to pgx.
+- Manages transactions with `pgx.BeginTxFunc`.
+- Calls repository methods, maps sqlc row types to response DTOs.
+- Calls `common.AuditLog(ctx, tx, entry)` inside the transaction.
+- Returns typed `*common.AppError` for domain failures. Returns `nil` + response struct on success.
 
-### @Repository (Spring Data JPA)
+### Repository (`repository.go`)
 
-- Extends `JpaRepository<Entity, UUID>` or `JpaRepository<Entity, Long>`.
-- Declares custom JPQL or native SQL queries for non-standard lookups.
-- **No business logic**.
-- Persistence only.
+- Owns a reference to `*sqlc.Queries` (constructed from the pool) and the `*pgxpool.Pool` for ad-hoc transactions.
+- Exposes methods that are either direct sqlc call pass-throughs or hand-written `pool.Query(ctx, ...)` calls where sqlc isn't a good fit.
+- **No business logic.**
 
-### @Entity
+### DTOs (`dto.go`)
 
-- JPA mapping only.
-- No business methods, no service calls.
-- Relationships declared with `@OneToMany`, `@ManyToOne`, etc.
-- Use `@Enumerated(EnumType.STRING)` for all enums.
+- Request structs with `json:"..."` and `validate:"..."` struct tags.
+- Response structs with `json:"..."` tags only.
+- Never expose sqlc row types directly over the wire — map them to DTOs in the service layer.
 
 ---
 
 ## DTO Architecture
 
-JPA entities are **never** returned directly from controllers. The flow is:
+sqlc-generated row types are **never** returned directly from handlers. The flow is:
 
 ```
 Incoming JSON
     ↓
-Request DTO     (@Valid for bean validation)
+json.Decoder → Request DTO       (struct tags: json, validate)
     ↓
-Controller      (calls service with request DTO)
+validator.Struct(&req)           (returns ValidationErrors on failure)
     ↓
-Service         (maps request DTO → entity, applies business rules)
+Handler                          (calls service with request DTO + ctx)
     ↓
-Repository      (persists entity)
+Service                          (maps DTO → sqlc params, applies business rules)
     ↓
-Database
+Repository → sqlc query          (parameterized SQL via pgx)
+    ↓
+PostgreSQL
 
-Database
+PostgreSQL
     ↓
-Entity          (fetched by repository)
+sqlc row type                    (returned by Queries.*)
     ↓
-Service         (maps entity → response DTO)
+Service                          (maps row type → response DTO)
     ↓
-Controller      (returns ResponseEntity<ResponseDTO>)
+Handler                          (render.JSON with response DTO)
     ↓
 Response JSON
 ```
@@ -301,16 +202,20 @@ Response JSON
 
 ### Mapping Strategy
 
-**OPEN DECISION:** Manual mapping vs MapStruct.
+Mapping is **manual** — a function per direction, written in the service file (or a `mapper.go` within the module if a feature has many mappings).
 
-| Option | Notes |
-|---|---|
-| **MapStruct** | Compile-time generated mappers, zero runtime overhead, type-safe | Add `mapstruct` dependency |
-| **Manual mapping** | Explicit, no extra dependency, more verbose | Suitable for simple cases |
+```go
+func toMemberResponse(row sqlc.Member) MemberDetailResponse {
+    return MemberDetailResponse{
+        ID:         row.ID,
+        MemberCode: row.MemberCode,
+        FirstName:  row.FirstName,
+        // ...
+    }
+}
+```
 
-Recommendation: **MapStruct** for entities with many fields; manual mapping for simple ones.
-
-Mappers live as `@Mapper`-annotated interfaces inside the feature package or in a dedicated `mapper/` sub-package.
+Go does not have a compile-time mapper generator in common use that fits this scope. The number of fields per DTO is small; manual mapping is explicit, has no runtime cost, and keeps the type graph obvious. If a mapping gets large (>30 lines), split helpers inside the module.
 
 ---
 
@@ -318,135 +223,137 @@ Mappers live as `@Mapper`-annotated interfaces inside the feature package or in 
 
 ### Two Tiers of Validation
 
-**Tier 1 — Request validation (Bean Validation on DTOs)**
+**Tier 1 — Request validation (struct tags on DTOs)**
 
-Declared with annotations on DTO fields:
+Declared with `validate:` struct tags, enforced by `validator.Struct(&req)` in the handler:
 
-```java
-// Conceptual — CreateMemberRequest
-
-@NotBlank(message = "First name is required")
-@Size(min = 2, max = 50, message = "First name must be 2–50 characters")
-private String firstName;
-
-@NotBlank(message = "Phone number is required")
-@Pattern(regexp = "^\\d{10}$", message = "Enter a valid 10-digit phone number")
-private String phone;
-
-@Email(message = "Enter a valid email address")
-private String email;  // nullable; @Email only validates if non-null
-
-@Positive(message = "Amount must be greater than 0")
-private BigDecimal amount;
-
-@PastOrPresent(message = "Date of birth cannot be in the future")
-private LocalDate dateOfBirth;
-
-@Min(value = 1, message = "Duration must be at least 1 day")
-private Integer durationInDays;
+```go
+type CreateMemberRequest struct {
+    FirstName   string `json:"firstName"             validate:"required,min=2,max=50"`
+    LastName    string `json:"lastName,omitempty"    validate:"omitempty,max=50"`
+    Phone       string `json:"phone"                 validate:"required,len=10,numeric"`
+    Email       string `json:"email,omitempty"       validate:"omitempty,email"`
+    DateOfBirth string `json:"dateOfBirth,omitempty" validate:"omitempty,datetime=2006-01-02"`
+    Address     string `json:"address,omitempty"     validate:"omitempty,max=500"`
+}
 ```
 
-Activated by `@Valid` on the controller method parameter. Failures produce `400 Bad Request` via `MethodArgumentNotValidException`, handled by `GlobalExceptionHandler`.
-
-**Tier 2 — Business validation (in Service layer)**
-
-These rules cannot be expressed in DTO annotations because they depend on database state:
+Common validator tags used across DTOs:
 
 ```
-Member phone uniqueness            → SELECT from DB, throw ConflictException
+required         field must be set / non-zero
+omitempty        skip validation if the field is empty
+min=N / max=N    numeric or length bounds
+len=N            exact length
+email            email format (RFC 5322 subset)
+numeric          digits only
+datetime=LAYOUT  parse with time.Parse(LAYOUT, value)
+gt=0 / gte=0     greater-than / greater-or-equal (for numbers)
+oneof=A B C      enum-like whitelist
+```
+
+Validation errors produce `400 Bad Request` via `render.ValidationError(w, err)`, which collects `validator.ValidationErrors` into a field-level details object matching the frontend `ApiErrorData` shape.
+
+**Tier 2 — Business validation (service layer)**
+
+These rules cannot be expressed in struct tags because they depend on database state:
+
+```
+Member phone uniqueness            → SELECT, return *AppError (ConflictError)
 One active membership per member   → query memberships table
 Attendance duplicate check         → query attendance table
-Inventory stock sufficiency check  → query current stock
+Inventory stock sufficiency check  → query current stock inside tx (FOR UPDATE)
 Lead already converted             → check lead status
 Inactive plan cannot be used       → check plan status
 ```
 
-Service methods check these conditions and throw domain exceptions before any mutation.
+Service methods check these conditions and return domain errors before any mutation.
 
 ---
 
-## Exception Handling
+## Error Handling
 
-### Domain Exception Hierarchy
+### Domain Error Type
 
-```java
-// Conceptual
+Go uses typed errors, not exceptions. A single `AppError` struct carries HTTP status, machine code, and message. Constructors produce the common shapes.
 
-public class AppException extends RuntimeException {
-    private final String code;
-    private final int httpStatus;
+```go
+// internal/common/errors.go
+package common
+
+type AppError struct {
+    Code       string
+    HTTPStatus int
+    Message    string
+    Details    any
 }
 
-public class NotFoundException extends AppException {
-    public NotFoundException(String code, String message) {
-        super(code, 404, message);
-    }
+func (e *AppError) Error() string { return e.Message }
+
+func NewBadRequestError(code, msg string) *AppError {
+    return &AppError{Code: code, HTTPStatus: 400, Message: msg}
 }
-
-public class ConflictException extends AppException {
-    public ConflictException(String code, String message) {
-        super(code, 409, message);
-    }
+func NewUnauthenticatedError() *AppError {
+    return &AppError{Code: "UNAUTHENTICATED", HTTPStatus: 401, Message: "Authentication required."}
 }
-
-public class BusinessRuleException extends AppException {
-    public BusinessRuleException(String code, String message) {
-        super(code, 422, message);
-    }
+func NewForbiddenError() *AppError {
+    return &AppError{Code: "FORBIDDEN", HTTPStatus: 403, Message: "You do not have permission."}
 }
-
-// Domain-specific subclasses:
-public class MemberPhoneDuplicateException extends ConflictException { ... }
-public class MembershipAlreadyActiveException extends ConflictException { ... }
-public class AttendanceAlreadyMarkedException extends ConflictException { ... }
-public class InsufficientStockException extends BusinessRuleException { ... }
-public class LeadAlreadyConvertedException extends ConflictException { ... }
-```
-
-### Global Exception Handler
-
-```java
-// Conceptual
-
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-
-    @ExceptionHandler(AppException.class)
-    public ResponseEntity<ApiError> handleAppException(AppException ex) {
-        return ResponseEntity
-            .status(ex.getHttpStatus())
-            .body(new ApiError(ex.getHttpStatus(), ex.getCode(), ex.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
-        // collect field errors, return 400
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiError> handleForbidden(AccessDeniedException ex) {
-        return ResponseEntity.status(403)
-            .body(new ApiError(403, "FORBIDDEN", "You do not have permission."));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleGeneric(Exception ex) {
-        log.error("Unhandled exception", ex);
-        return ResponseEntity.status(500)
-            .body(new ApiError(500, "INTERNAL_SERVER_ERROR", "An unexpected error occurred."));
-    }
+func NewNotFoundError(code, msg string) *AppError {
+    return &AppError{Code: code, HTTPStatus: 404, Message: msg}
+}
+func NewConflictError(code, msg string) *AppError {
+    return &AppError{Code: code, HTTPStatus: 409, Message: msg}
+}
+func NewBusinessRuleError(code, msg string) *AppError {
+    return &AppError{Code: code, HTTPStatus: 422, Message: msg}
 }
 ```
 
-### Standard Error Response DTO
+**Domain error construction examples** (in services):
 
-```java
-public record ApiError(
-    int status,
-    String code,
-    String message,
-    Object details      // optional; null by default
-) {}
+```go
+common.NewConflictError("MEMBER_PHONE_DUPLICATE",       "A member with this phone number already exists.")
+common.NewConflictError("MEMBERSHIP_ALREADY_ACTIVE",    "This member already has an active membership.")
+common.NewConflictError("ATTENDANCE_ALREADY_MARKED",    "Attendance has already been marked for this member on this date.")
+common.NewBusinessRuleError("INVENTORY_INSUFFICIENT_STOCK", "Insufficient stock for this transaction.")
+common.NewConflictError("LEAD_ALREADY_CONVERTED",       "This lead has already been converted.")
+```
+
+Returning typed errors — rather than defining a different type per domain — keeps the handler/middleware mapping trivial. The `Code` field discriminates the specific condition.
+
+### Error Middleware (`render.Error`)
+
+```go
+// internal/common/render/render.go
+func Error(w http.ResponseWriter, err error) {
+    var ae *common.AppError
+    if errors.As(err, &ae) {
+        writeJSON(w, ae.HTTPStatus, apiError{
+            Status:  ae.HTTPStatus,
+            Code:    ae.Code,
+            Message: ae.Message,
+            Details: ae.Details,
+        })
+        return
+    }
+    // Unknown error: log and return 500 without leaking details.
+    slog.ErrorContext(context.Background(), "unhandled error", "err", err)
+    writeJSON(w, 500, apiError{Status: 500, Code: "INTERNAL_SERVER_ERROR", Message: "An unexpected error occurred."})
+}
+```
+
+The chi `Recoverer` middleware catches panics; the generic 500 branch here handles non-`AppError` returned errors.
+
+### Standard Error Response
+
+```go
+type apiError struct {
+    Status  int    `json:"status"`
+    Code    string `json:"code"`
+    Message string `json:"message"`
+    Details any    `json:"details,omitempty"`
+}
 ```
 
 Matches the frontend `ApiErrorData` interface.
@@ -455,226 +362,329 @@ Matches the frontend `ApiErrorData` interface.
 
 ## Transaction Management
 
-`@Transactional` is placed **on service methods**, not repositories or controllers.
+The `pgx.BeginTxFunc` helper runs a function inside a transaction, committing on success and rolling back on any returned error (including panics).
 
 Rules:
-- Every service method that mutates data and must be atomic is annotated `@Transactional`.
-- Read-only methods are annotated `@Transactional(readOnly = true)` for Hibernate query optimization.
-- No `@Transactional` on controllers.
-- No `@Transactional` on repositories (Spring Data JPA handles single-operation transactions by default).
+- Transactions live **in the service layer**, not in handlers or repositories.
+- Every service method that mutates data across more than one statement is wrapped.
+- The sqlc `Queries` is instantiated per transaction: `q := sqlc.New(tx)`.
+- The audit log write is called inside the same transaction with `common.AuditLog(ctx, tx, entry)`.
+- Read-only service methods do not need a transaction unless they issue multiple queries that must see a consistent snapshot.
 
-### Operations requiring explicit `@Transactional`
+```go
+// Example — MembershipService.Create
+func (s *Service) Create(ctx context.Context, req CreateMembershipRequest, actorID uuid.UUID) (*MembershipResponse, error) {
+    var resp *MembershipResponse
+    err := pgx.BeginTxFunc(ctx, s.pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
+        q := sqlc.New(tx)
 
-| Service method | Tables involved |
-|---|---|
-| `MembershipService.createMembership()` | `memberships` INSERT + `audit_logs` INSERT |
-| `PaymentService.recordPayment()` | `payments` INSERT + `audit_logs` INSERT |
-| `AttendanceService.markAttendance()` | `attendance` INSERT + `audit_logs` INSERT |
-| `AssignmentService.assignTrainer()` | `assignments` UPDATE (end) + INSERT (new) + `audit_logs` INSERT |
-| `LeadService.convertLead()` | `leads` UPDATE + `members` INSERT + `audit_logs` INSERT ×2 |
-| `InventoryService.recordTransaction()` | `inventory_transactions` INSERT + `inventory_items` UPDATE + `audit_logs` INSERT |
-| `MemberService.createMember()` | `members` INSERT + `audit_logs` INSERT |
-| `UserService.createUser()` | `users` INSERT + `audit_logs` INSERT |
-| `SettingsService.save()` | `gym_settings` UPDATE + `audit_logs` INSERT |
+        plan, err := q.GetPlanByID(ctx, req.PlanID)
+        if err != nil {
+            if errors.Is(err, pgx.ErrNoRows) {
+                return common.NewNotFoundError("MEMBERSHIP_PLAN_NOT_FOUND", "Membership plan not found.")
+            }
+            return err
+        }
+        if plan.Status != "ACTIVE" {
+            return common.NewBusinessRuleError("MEMBERSHIP_PLAN_INACTIVE", "Plan is not active.")
+        }
 
----
+        hasActive, err := q.MemberHasActiveMembership(ctx, req.MemberID)
+        if err != nil {
+            return err
+        }
+        if hasActive {
+            return common.NewConflictError("MEMBERSHIP_ALREADY_ACTIVE", "This member already has an active membership.")
+        }
 
-## JPA / Hibernate Design Notes
+        endDate := req.StartDate.AddDate(0, 0, int(plan.DurationInDays))
+        row, err := q.InsertMembership(ctx, sqlc.InsertMembershipParams{
+            MemberID:  req.MemberID,
+            PlanID:    plan.ID,
+            PlanName:  plan.Name,
+            Amount:    plan.Price,
+            StartDate: req.StartDate,
+            EndDate:   endDate,
+            Status:    "ACTIVE",
+        })
+        if err != nil {
+            return err
+        }
 
-### Entity Relationships
+        if err := common.AuditLog(ctx, tx, common.AuditEntry{
+            ActorID:    actorID,
+            Action:     "CREATE",
+            EntityType: "MEMBERSHIP",
+            EntityID:   row.ID.String(),
+        }); err != nil {
+            return err
+        }
 
-Design unidirectional relationships where bidirectional is not needed for queries. Bidirectional relationships add complexity (maintain both sides, risk of infinite recursion in serialization).
-
-```java
-// Conceptual — Membership entity
-
-@Entity
-@Table(name = "memberships")
-public class Membership {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-
-    @ManyToOne(fetch = FetchType.LAZY)   // always LAZY for @ManyToOne
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plan_id", nullable = false)
-    private MembershipPlan plan;
-
-    @Column(name = "plan_name", nullable = false)
-    private String planName;             // snapshot
-
-    @Column(name = "start_date", nullable = false)
-    private LocalDate startDate;
-
-    @Column(name = "end_date", nullable = false)
-    private LocalDate endDate;
-
-    @Column(name = "amount", nullable = false)
-    private BigDecimal amount;           // snapshot
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private MembershipStatus status;
-
-    @CreationTimestamp
-    private Instant createdAt;
+        resp = toMembershipResponse(row)
+        return nil
+    })
+    if err != nil {
+        return nil, err
+    }
+    return resp, nil
 }
 ```
 
-### Fetch Strategy
+### Operations requiring an explicit transaction
 
-- `@ManyToOne`: always `FetchType.LAZY` (default is EAGER — override it explicitly).
-- `@OneToMany`: always `FetchType.LAZY` (this is the default).
-- Never use `FetchType.EAGER` unless profiling proves a specific case requires it.
-
-### N+1 Problem Prevention
-
-When a controller returns a list of entities that require related data (e.g., member list with trainer name), use a JPQL `JOIN FETCH` or `@EntityGraph`:
-
-```java
-// In MemberRepository — fetch with current membership in one query
-@Query("SELECT m FROM Member m LEFT JOIN FETCH m.activeMembership WHERE ...")
-List<Member> findAllWithActiveMembership(Pageable pageable);
-```
-
-Alternatively, use projection DTOs (JPQL constructor expressions) for list endpoints to avoid loading full entity graphs.
-
-### Enum Mapping
-
-All enums must be stored as strings in the database:
-
-```java
-@Enumerated(EnumType.STRING)
-@Column(nullable = false)
-private MemberStatus status;
-```
-
-Never use `EnumType.ORDINAL` — ordinal values break when enum order changes.
-
-### Unique Constraints
-
-Database-level unique constraints are defined both in the schema (Flyway migration) and on the entity:
-
-```java
-// Conceptual
-@Table(name = "members", uniqueConstraints = {
-    @UniqueConstraint(name = "uq_member_phone", columnNames = "phone"),
-    @UniqueConstraint(name = "uq_member_code", columnNames = "member_code")
-})
-```
-
-### Audit Timestamps
-
-Use Hibernate `@CreationTimestamp` and `@UpdateTimestamp` for automatic timestamp management:
-
-```java
-@CreationTimestamp
-@Column(name = "created_at", nullable = false, updatable = false)
-private Instant createdAt;
-
-@UpdateTimestamp
-@Column(name = "updated_at", nullable = false)
-private Instant updatedAt;
-```
-
-### Cascade
-
-Use cascade sparingly and only where the parent genuinely owns the child:
-- `CascadeType.PERSIST` on `Equipment` → `EquipmentMaintenance` is not appropriate (maintenance is added independently).
-- Cascade is generally **not used** in this domain — all entities are managed independently.
-- `orphanRemoval` is not used — no child is automatically deleted when removed from a parent collection.
+| Service method | Tables involved |
+|---|---|
+| `MembershipService.Create` | `memberships` INSERT + `audit_logs` INSERT |
+| `PaymentService.Record` | `payments` INSERT + `audit_logs` INSERT |
+| `AttendanceService.Mark` | `attendance` INSERT + `audit_logs` INSERT |
+| `AssignmentService.Assign` | `assignments` UPDATE (end) + INSERT (new) + `audit_logs` INSERT |
+| `LeadService.Convert` | `leads` UPDATE + `members` INSERT + `audit_logs` INSERT ×2 |
+| `InventoryService.RecordTransaction` | `inventory_transactions` INSERT + `inventory_items` UPDATE + `audit_logs` INSERT |
+| `MemberService.Create` | `members` INSERT + `audit_logs` INSERT |
+| `UserService.Create` | `users` INSERT + `audit_logs` INSERT |
+| `SettingsService.Save` | `gym_settings` UPDATE + `audit_logs` INSERT |
 
 ---
 
-## Audit Service
+## Canonical Handler
 
-The `AuditService` is a shared service in `common/audit/` used by all feature services:
+```go
+// internal/modules/member/handler.go
+package member
 
-```java
-// Conceptual
+import (
+    "encoding/json"
+    "net/http"
 
-@Service
-public class AuditService {
+    "github.com/go-chi/chi/v5"
+    "github.com/go-playground/validator/v10"
 
-    public void log(
-        UUID userId,
-        AuditAction action,
-        AuditEntityType entityType,
-        String entityId,
-        String entityName,
-        String description,
-        AuditStatus status,
-        Map<String, Object> metadata
-    ) {
-        AuditLog entry = new AuditLog(...);
-        auditLogRepository.save(entry);
+    "example.com/gym/internal/common"
+    "example.com/gym/internal/common/render"
+    "example.com/gym/internal/middleware"
+)
+
+type Handler struct {
+    service   *Service
+    validator *validator.Validate
+}
+
+func NewHandler(service *Service, v *validator.Validate) *Handler {
+    return &Handler{service: service, validator: v}
+}
+
+func (h *Handler) Routes() chi.Router {
+    r := chi.NewRouter()
+    r.Use(middleware.RequireAuth)
+
+    r.With(middleware.RequirePermission("members:view")).Get("/", h.list)
+    r.With(middleware.RequirePermission("members:view")).Get("/{id}", h.get)
+    r.With(middleware.RequirePermission("members:create")).Post("/", h.create)
+    r.With(middleware.RequirePermission("members:edit")).Patch("/{id}", h.update)
+    r.With(middleware.RequirePermission("members:delete")).Delete("/{id}", h.delete)
+
+    return r
+}
+
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+    var req CreateMemberRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        render.Error(w, common.NewBadRequestError("INVALID_JSON", "Malformed JSON body"))
+        return
+    }
+    if err := h.validator.Struct(&req); err != nil {
+        render.ValidationError(w, err)
+        return
+    }
+
+    actorID := middleware.ActorID(r.Context())
+    member, err := h.service.Create(r.Context(), req, actorID)
+    if err != nil {
+        render.Error(w, err)
+        return
+    }
+    render.JSON(w, http.StatusCreated, member)
+}
+```
+
+---
+
+## pgx + sqlc Design Notes
+
+### Query Definition
+
+Every module has an SQL file under `internal/db/queries/` with named queries using sqlc annotations:
+
+```sql
+-- internal/db/queries/members.sql
+
+-- name: InsertMember :one
+INSERT INTO members (id, member_code, first_name, last_name, phone, email, date_of_birth, address, status)
+VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 'ACTIVE')
+RETURNING *;
+
+-- name: GetMemberByID :one
+SELECT * FROM members WHERE id = $1;
+
+-- name: ExistsMemberByPhone :one
+SELECT EXISTS(SELECT 1 FROM members WHERE phone = $1) AS present;
+
+-- name: ListMembersPaged :many
+SELECT * FROM members
+WHERE ($1::text = '' OR first_name ILIKE '%' || $1 || '%' OR phone ILIKE '%' || $1 || '%')
+  AND ($2::text = '' OR status = $2)
+ORDER BY created_at DESC
+LIMIT $3 OFFSET $4;
+```
+
+sqlc reads these at generation time and produces type-safe Go functions. The repository layer calls them:
+
+```go
+func (r *Repository) ExistsByPhone(ctx context.Context, phone string) (bool, error) {
+    return r.q.ExistsMemberByPhone(ctx, phone)
+}
+```
+
+### Row Fetches and Null Handling
+
+- Scalar nullable columns use pgx `pgtype.Text`, `pgtype.Date`, `pgtype.Timestamptz`, etc. in the generated structs.
+- The service layer converts these to pointer types or empty strings when mapping to response DTOs.
+- Enums stored as `TEXT` in Postgres (CHECK-constrained to the allowed set) are plain `string` fields in Go.
+
+### Avoiding N+1
+
+Where a list endpoint needs related data (member list with active trainer name), prefer:
+- A hand-written join query defined in the `.sql` file, or
+- A single aggregating query that produces a flat row shape the service maps to the response.
+
+Do not loop over a result set and fire per-row queries. sqlc makes this discipline easy because every query is explicit.
+
+### Enum Mapping
+
+All enums are stored as `TEXT` with a `CHECK` constraint on the allowed values. In Go, they are plain `string` typedefs or `string` constants:
+
+```go
+type MemberStatus string
+
+const (
+    MemberStatusActive   MemberStatus = "ACTIVE"
+    MemberStatusInactive MemberStatus = "INACTIVE"
+)
+```
+
+Postgres native `ENUM` types are avoided because altering them requires migrations and `TEXT + CHECK` composes better with `goose`.
+
+### Unique Constraints
+
+Database-level unique constraints are the definitive guard. Service-layer existence checks exist for better error messages, but the DB constraint is the correctness boundary. The error middleware recognises Postgres `23505` (unique_violation) and `23503` (foreign_key_violation) by inspecting `*pgconn.PgError.Code` and `.ConstraintName`, mapping known constraints to domain error codes.
+
+```go
+var pgErr *pgconn.PgError
+if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+    switch pgErr.ConstraintName {
+    case "uq_member_phone":
+        return common.NewConflictError("MEMBER_PHONE_DUPLICATE", "A member with this phone number already exists.")
+    case "uq_attendance_member_date":
+        return common.NewConflictError("ATTENDANCE_ALREADY_MARKED", "Attendance has already been marked.")
     }
 }
 ```
 
-The audit log write happens **inside the same `@Transactional` context** as the primary operation. If the primary operation is rolled back, the audit log write is also rolled back.
+### Audit Timestamps
+
+Columns `created_at` (`TIMESTAMPTZ NOT NULL DEFAULT NOW()`) and `updated_at` (`TIMESTAMPTZ NOT NULL DEFAULT NOW()`). The `updated_at` column is maintained by a Postgres trigger (`BEFORE UPDATE` row-level trigger that sets `NEW.updated_at = NOW()`). This keeps timestamp management out of application code.
+
+---
+
+## Audit Helper
+
+The audit helper lives in `internal/common/audit.go` and is called from any service inside the current transaction:
+
+```go
+package common
+
+type AuditEntry struct {
+    ActorID     uuid.UUID
+    Action      string            // "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT"
+    EntityType  string            // "MEMBER", "MEMBERSHIP", ...
+    EntityID    string
+    EntityName  string
+    Description string
+    Status      string            // "SUCCESS", "FAILED"
+    Metadata    map[string]any    // optional; stored as JSONB
+}
+
+func AuditLog(ctx context.Context, tx pgx.Tx, entry AuditEntry) error {
+    q := sqlc.New(tx)
+    _, err := q.InsertAuditLog(ctx, sqlc.InsertAuditLogParams{ ... })
+    return err
+}
+```
+
+Because the helper takes a `pgx.Tx`, the audit insert is always part of the same transaction as the primary operation. If the primary operation returns an error, `BeginTxFunc` rolls back the whole thing.
+
+For failed-login audit records, the audit insert is called outside a transaction (`AuditLogWithPool(ctx, pool, entry)`) since there is no primary mutation to join.
 
 ---
 
 ## Code Generator
 
-```java
-// Conceptual — common/codegen/CodeGenerator.java
+```go
+// internal/common/codegen.go
+package common
 
-@Service
-public class CodeGenerator {
+func NextMemberCode(ctx context.Context, tx pgx.Tx) (string, error) {
+    return nextCode(ctx, tx, "MEM-", "member_code_seq")
+}
+func NextUserCode(ctx context.Context, tx pgx.Tx) (string, error) {
+    return nextCode(ctx, tx, "USR-", "user_code_seq")
+}
+func NextTrainerCode(ctx context.Context, tx pgx.Tx) (string, error) {
+    return nextCode(ctx, tx, "TRN-", "trainer_code_seq")
+}
+func NextLeadCode(ctx context.Context, tx pgx.Tx) (string, error) {
+    return nextCode(ctx, tx, "LEAD-", "lead_code_seq")
+}
+// ...NextExpenseCode, NextItemCode, NextEquipCode
 
-    // Uses a database sequence (or a counter table) to generate unique, sequential codes.
-    public String nextMemberCode()   { return generate("MEM-", "member_code_seq"); }
-    public String nextUserCode()     { return generate("USR-", "user_code_seq"); }
-    public String nextTrainerCode()  { return generate("TRN-", "trainer_code_seq"); }
-    public String nextLeadCode()     { return generate("LEAD-", "lead_code_seq"); }
-    public String nextExpenseCode()  { return generate("EXP-", "expense_code_seq"); }
-    public String nextItemCode()     { return generate("INV-", "item_code_seq"); }
-    public String nextEquipCode()    { return generate("EQ-", "equipment_code_seq"); }
-
-    private String generate(String prefix, String sequence) {
-        Long n = (Long) em.createNativeQuery(
-            "SELECT nextval('" + sequence + "')"
-        ).getSingleResult();
-        return prefix + String.format("%03d", n);
+func nextCode(ctx context.Context, tx pgx.Tx, prefix, sequence string) (string, error) {
+    var n int64
+    row := tx.QueryRow(ctx, "SELECT nextval($1)", sequence)
+    if err := row.Scan(&n); err != nil {
+        return "", err
     }
+    return fmt.Sprintf("%s%03d", prefix, n), nil
 }
 ```
+
+Sequences (`member_code_seq`, `user_code_seq`, …) are created in migration `003_code_sequences.sql`. Postgres sequences are inherently concurrent-safe, so two simultaneous `nextval` calls always return distinct values.
 
 ---
 
 ## Scheduled Jobs
 
-```java
-// Conceptual — notification/NotificationScheduler.java
+```go
+// internal/common/scheduler.go
+package common
 
-@Component
-public class NotificationScheduler {
-
-    @Scheduled(cron = "0 0 0 * * ?", zone = "Asia/Kolkata")
-    @Transactional
-    public void expireMemberships() {
-        // find ACTIVE memberships where end_date < today (IST)
-        // update status to EXPIRED
-        // update member.status if no remaining active membership
-        // write audit logs
-    }
-
-    @Scheduled(cron = "0 0 9 * * ?", zone = "Asia/Kolkata")
-    public void sendExpiryNotifications() {
-        // find memberships expiring in 7 days
-        // create notification records
-        // dispatch via configured channels
-    }
+func NewScheduler(loc *time.Location) *cron.Cron {
+    return cron.New(cron.WithLocation(loc))
 }
+
+// internal/app/app.go — during startup
+loc, _ := time.LoadLocation("Asia/Kolkata")
+c := common.NewScheduler(loc)
+
+c.AddFunc("0 0 * * *", wrapJob(pool, "expire_memberships",         notification.ExpireMemberships))
+c.AddFunc("0 9 * * *", wrapJob(pool, "send_expiry_notifications",  notification.SendExpiryNotifications))
+c.AddFunc("0 2 * * *", wrapJob(pool, "daily_backup",               backup.RunBackup))
+
+c.Start()
 ```
 
-No external job queue is needed. `@EnableScheduling` is placed on the application class or a `@Configuration` class.
+`wrapJob` is a small helper that opens its own `context.Context` (with a deadline), logs start/end at INFO, and recovers from panics so a single bad run never kills the cron instance.
+
+No external job queue is used. The cron goroutine runs inside the same process as the HTTP server.
 
 ---
 
@@ -685,35 +695,35 @@ No external job queue is needed. `@EnableScheduling` is placed on the applicatio
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant SC as Spring Security
-    participant C as MemberController
-    participant S as MemberService
-    participant R as MemberRepository
-    participant CG as CodeGenerator
-    participant A as AuditService
-    participant DB as Database
+    participant AM as auth middleware
+    participant H as member handler
+    participant S as member service
+    participant R as member repository
+    participant CG as codegen helper
+    participant A as audit helper
+    participant DB as PostgreSQL
 
-    FE->>SC: POST /api/v1/members {firstName, phone, ...}
-    SC-->>FE: 401 if unauthenticated
-    SC->>C: request + Principal (authenticated user)
-    C->>C: @Valid validation
-    C-->>FE: 400 if validation fails
-    C->>S: createMember(CreateMemberRequest, actorUserId)
-    S->>R: existsByPhone(phone)
-    R->>DB: SELECT EXISTS ... WHERE phone = ?
+    FE->>AM: POST /api/v1/members {firstName, phone, ...}
+    AM-->>FE: 401 if cookie missing / invalid
+    AM->>H: req + ctx with actor claims
+    H->>H: json.Decode + validator.Struct(&req)
+    H-->>FE: 400 if validation fails
+    H->>S: Create(ctx, req, actorID)
+    S->>R: ExistsByPhone(ctx, phone)
+    R->>DB: SELECT EXISTS ... WHERE phone = $1
     alt phone taken
-        S-->>C: throw MemberPhoneDuplicateException
-        C-->>FE: 409 MEMBER_PHONE_DUPLICATE
+        S-->>H: *AppError MEMBER_PHONE_DUPLICATE
+        H-->>FE: 409 MEMBER_PHONE_DUPLICATE
     else
-        S->>CG: nextMemberCode()
-        note over S: @Transactional boundary begins
-        S->>R: save(member entity)
-        R->>DB: INSERT INTO members (...)
-        S->>A: log(actorId, CREATE, MEMBER, id, name, SUCCESS)
+        note over S: pgx.BeginTxFunc begins
+        S->>CG: NextMemberCode(ctx, tx)
+        S->>R: InsertMember(ctx, tx, params)
+        R->>DB: INSERT INTO members (...) RETURNING *
+        S->>A: AuditLog(ctx, tx, CREATE, MEMBER, ...)
         A->>DB: INSERT INTO audit_logs (...)
-        note over S: @Transactional commits
-        S-->>C: MemberDetailResponse
-        C-->>FE: 201 MemberDetailResponse
+        note over S: tx commits
+        S-->>H: MemberDetailResponse
+        H-->>FE: 201 MemberDetailResponse
     end
 ```
 
@@ -724,32 +734,35 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant C as MembershipController
-    participant S as MembershipService
-    participant PR as MembershipPlanRepository
-    participant MR as MembershipRepository
-    participant A as AuditService
-    participant DB as Database
+    participant H as membership handler
+    participant S as membership service
+    participant PR as plan repository
+    participant MR as membership repository
+    participant A as audit helper
+    participant DB as PostgreSQL
 
-    FE->>C: POST /api/v1/memberships {memberId, planId, startDate}
-    C->>S: createMembership(request, actorId)
-    S->>PR: findById(planId)
-    alt plan not found or INACTIVE
-        S-->>C: throw NotFoundException / BusinessRuleException
-        C-->>FE: 404 / 422
+    FE->>H: POST /api/v1/memberships {memberId, planId, startDate}
+    H->>S: Create(ctx, req, actorID)
+    note over S: pgx.BeginTxFunc begins
+    S->>PR: GetPlanByID(ctx, tx, planId)
+    alt plan not found
+        S-->>H: *AppError 404 MEMBERSHIP_PLAN_NOT_FOUND
+        H-->>FE: 404
+    else plan.Status != ACTIVE
+        S-->>H: *AppError 422 MEMBERSHIP_PLAN_INACTIVE
+        H-->>FE: 422
     else
-        S->>MR: existsByMemberIdAndStatus(memberId, ACTIVE)
+        S->>MR: MemberHasActiveMembership(ctx, tx, memberId)
         alt active membership exists
-            S-->>C: throw MembershipAlreadyActiveException
-            C-->>FE: 409 MEMBERSHIP_ALREADY_ACTIVE
+            S-->>H: *AppError 409 MEMBERSHIP_ALREADY_ACTIVE
+            H-->>FE: 409
         else
-            S->>S: endDate = startDate.plusDays(plan.durationInDays)
-            note over S: @Transactional begins
-            S->>MR: save(new Membership with planName+amount snapshots)
-            S->>A: log(CREATE, MEMBERSHIP, ...)
-            note over S: @Transactional commits
-            S-->>C: MembershipResponse
-            C-->>FE: 201 MembershipResponse
+            S->>S: endDate = startDate.AddDate(0,0,plan.DurationInDays)
+            S->>MR: InsertMembership(ctx, tx, params with planName/amount snapshots)
+            S->>A: AuditLog(ctx, tx, CREATE, MEMBERSHIP, ...)
+            note over S: tx commits
+            S-->>H: MembershipResponse
+            H-->>FE: 201 MembershipResponse
         end
     end
 ```
@@ -761,32 +774,31 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant C as AttendanceController
-    participant S as AttendanceService
-    participant SR as SettingsRepository
-    participant MR as MembershipRepository
-    participant AR as AttendanceRepository
-    participant A as AuditService
-    participant DB as Database
+    participant H as attendance handler
+    participant S as attendance service
+    participant SR as settings repository
+    participant MR as membership repository
+    participant AR as attendance repository
+    participant A as audit helper
+    participant DB as PostgreSQL
 
-    FE->>C: POST /api/v1/attendance {memberId, date, checkInTime}
-    C->>S: markAttendance(request, actorId)
-    S->>SR: findSettings()
-    S->>MR: findActiveMembership(memberId)
+    FE->>H: POST /api/v1/attendance {memberId, date, checkInTime}
+    H->>S: Mark(ctx, req, actorID)
+    S->>SR: Get(ctx)
+    S->>MR: FindActiveMembership(ctx, memberId)
     alt no active membership AND allowExpired = false
-        S-->>C: throw AttendanceNotAllowedException
-        C-->>FE: 422 ATTENDANCE_NOT_ALLOWED
+        S-->>H: *AppError 422 ATTENDANCE_NOT_ALLOWED
+        H-->>FE: 422
     else
-        S->>AR: existsByMemberIdAndAttendanceDate(memberId, date)
-        alt already marked
-            S-->>C: throw AttendanceAlreadyMarkedException
-            C-->>FE: 409 ATTENDANCE_ALREADY_MARKED
+        note over S: pgx.BeginTxFunc begins
+        S->>AR: InsertAttendance(ctx, tx, params)
+        alt UNIQUE(member_id, attendance_date) violation
+            S-->>H: *AppError 409 ATTENDANCE_ALREADY_MARKED
+            H-->>FE: 409
         else
-            note over S: @Transactional begins
-            S->>AR: save(attendance)
-            S->>A: log(CREATE, ATTENDANCE, ...)
-            note over S: @Transactional commits
-            C-->>FE: 201 AttendanceResponse
+            S->>A: AuditLog(ctx, tx, CREATE, ATTENDANCE, ...)
+            note over S: tx commits
+            H-->>FE: 201 AttendanceResponse
         end
     end
 ```
@@ -798,33 +810,33 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant C as LeadController
-    participant S as LeadService
-    participant LR as LeadRepository
-    participant MR as MemberRepository
-    participant CG as CodeGenerator
-    participant A as AuditService
+    participant H as lead handler
+    participant S as lead service
+    participant LR as lead repository
+    participant MR as member repository
+    participant CG as codegen helper
+    participant A as audit helper
 
-    FE->>C: POST /api/v1/leads/:id/convert {firstName, phone, ...}
-    C->>S: convertLead(leadId, request, actorId)
-    S->>LR: findById(leadId)
+    FE->>H: POST /api/v1/leads/:id/convert {firstName, phone, ...}
+    H->>S: Convert(ctx, leadId, req, actorID)
+    note over S: pgx.BeginTxFunc begins
+    S->>LR: GetByID(ctx, tx, leadId)
     alt not found
-        S-->>C: 404 NOT_FOUND
-    else lead already CONVERTED
-        S-->>C: 409 LEAD_ALREADY_CONVERTED
+        S-->>H: *AppError 404 LEAD_NOT_FOUND
+    else lead.status == CONVERTED
+        S-->>H: *AppError 409 LEAD_ALREADY_CONVERTED
     else
-        S->>MR: existsByPhone(phone)
+        S->>MR: ExistsByPhone(ctx, tx, phone)
         alt duplicate phone
-            S-->>C: 409 MEMBER_PHONE_DUPLICATE
+            S-->>H: *AppError 409 MEMBER_PHONE_DUPLICATE
         else
-            S->>CG: nextMemberCode()
-            note over S: @Transactional begins
-            S->>MR: save(new Member)
-            S->>LR: update lead status=CONVERTED, convertedMemberId=newId
-            S->>A: log(CREATE, MEMBER, ...)
-            S->>A: log(UPDATE, LEAD, ...)
-            note over S: @Transactional commits
-            C-->>FE: 201 {lead, member}
+            S->>CG: NextMemberCode(ctx, tx)
+            S->>MR: InsertMember(ctx, tx, params)
+            S->>LR: UpdateLeadConverted(ctx, tx, leadId, newMemberId)
+            S->>A: AuditLog(ctx, tx, CREATE, MEMBER, ...)
+            S->>A: AuditLog(ctx, tx, UPDATE, LEAD, ...)
+            note over S: tx commits
+            H-->>FE: 201 {lead, member}
         end
     end
 ```
@@ -836,28 +848,28 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant C as InventoryController
-    participant S as InventoryService
-    participant IR as InventoryRepository
-    participant A as AuditService
+    participant H as inventory handler
+    participant S as inventory service
+    participant IR as inventory repository
+    participant A as audit helper
 
-    FE->>C: POST /api/v1/inventory/:id/transactions {type, quantity, ...}
-    C->>S: recordTransaction(itemId, request, actorId)
-    S->>IR: findByIdWithLock(itemId)    ← SELECT FOR UPDATE
+    FE->>H: POST /api/v1/inventory/:id/transactions {type, quantity, ...}
+    H->>S: RecordTransaction(ctx, itemId, req, actorID)
+    note over S: pgx.BeginTxFunc begins
+    S->>IR: GetItemForUpdate(ctx, tx, itemId)  — SELECT ... FOR UPDATE
     alt not found
-        S-->>C: 404 NOT_FOUND
+        S-->>H: *AppError 404 INVENTORY_ITEM_NOT_FOUND
     else
-        S->>S: compute newStock = currentStock ± quantity
-        alt STOCK_OUT and newStock < 0
-            S-->>C: 422 INVENTORY_INSUFFICIENT_STOCK
+        S->>S: newStock = currentStock ± quantity
+        alt STOCK_OUT AND newStock < 0
+            S-->>H: *AppError 422 INVENTORY_INSUFFICIENT_STOCK
         else
-            S->>S: deriveStatus(newStock, minimumStock)
-            note over S: @Transactional begins
-            S->>IR: saveTransaction(transactionData)
-            S->>IR: updateItemStock(itemId, newStock, newStatus)
-            S->>A: log(CREATE, INVENTORY_ITEM, ...)
-            note over S: @Transactional commits
-            C-->>FE: 201 {transaction, updatedItem}
+            S->>S: newStatus = deriveStatus(newStock, minimumStock)
+            S->>IR: InsertTransaction(ctx, tx, data)
+            S->>IR: UpdateItemStock(ctx, tx, itemId, newStock, newStatus)
+            S->>A: AuditLog(ctx, tx, CREATE, INVENTORY_ITEM, ...)
+            note over S: tx commits
+            H-->>FE: 201 {transaction, updatedItem}
         end
     end
 ```
@@ -866,130 +878,98 @@ sequenceDiagram
 
 ## Testing Strategy
 
-### Unit Tests
+### Unit Tests — business logic in isolation
 
-Test service business logic in isolation using Mockito:
+Use the standard `testing` package with `testify/require`. Repositories are hidden behind small interfaces defined at the service's consumer so they can be faked:
 
-```java
-@ExtendWith(MockitoExtension.class)
-class MembershipServiceTest {
+```go
+// In the service package
+type memberRepo interface {
+    ExistsByPhone(ctx context.Context, phone string) (bool, error)
+    Insert(ctx context.Context, tx pgx.Tx, p sqlc.InsertMemberParams) (sqlc.Member, error)
+}
 
-    @InjectMocks
-    private MembershipService membershipService;
+// In the test
+type fakeRepo struct { phoneTaken bool }
+func (f *fakeRepo) ExistsByPhone(ctx context.Context, phone string) (bool, error) { return f.phoneTaken, nil }
+func (f *fakeRepo) Insert(ctx context.Context, tx pgx.Tx, p sqlc.InsertMemberParams) (sqlc.Member, error) { return sqlc.Member{}, nil }
 
-    @Mock
-    private MembershipRepository membershipRepository;
+func TestCreateMember_DuplicatePhone(t *testing.T) {
+    s := NewService(&fakeRepo{phoneTaken: true}, nil, nil)
+    _, err := s.Create(context.Background(), CreateMemberRequest{Phone: "9876543210"}, uuid.New())
 
-    @Mock
-    private AuditService auditService;
-
-    @Test
-    void createMembership_whenActiveMembershipExists_throwsConflict() {
-        when(membershipRepository.existsByMemberIdAndStatus(any(), eq(ACTIVE)))
-            .thenReturn(true);
-
-        assertThrows(MembershipAlreadyActiveException.class,
-            () -> membershipService.createMembership(request, actorId));
-    }
+    var ae *common.AppError
+    require.ErrorAs(t, err, &ae)
+    require.Equal(t, "MEMBER_PHONE_DUPLICATE", ae.Code)
+    require.Equal(t, 409, ae.HTTPStatus)
 }
 ```
 
 **What to unit test:**
 - Business rules in services.
-- Derived computations (endDate = startDate + plan.durationInDays).
-- Exception conditions.
-- Permission guard logic.
+- Derived computations (`endDate = startDate.AddDate(0,0,plan.DurationInDays)`).
+- Error conditions (duplicate phone, already-active membership, etc.).
+- Permission map lookups.
 
-### Repository / Persistence Tests
+### Handler Tests — request validation, auth, response shape
 
-Use `@DataJpaTest` (loads only JPA layer, uses H2 in-memory database):
+Use `net/http/httptest` to exercise the chi router with a stub service:
 
-```java
-@DataJpaTest
-class AttendanceRepositoryTest {
+```go
+func TestCreateMember_InvalidPhone_Returns400(t *testing.T) {
+    h := NewHandler(&stubService{}, validator.New())
+    r := chi.NewRouter()
+    r.Mount("/api/v1/members", h.Routes())
 
-    @Test
-    void existsByMemberIdAndAttendanceDate_whenRecordExists_returnsTrue() {
-        // insert attendance, then check uniqueness
-    }
+    body := `{"firstName":"Rahul","phone":"123"}`
+    req := httptest.NewRequest(http.MethodPost, "/api/v1/members", strings.NewReader(body))
+    req.Header.Set("Content-Type", "application/json")
+    rr := httptest.NewRecorder()
 
-    @Test
-    void uniqueConstraint_preventsDuplicateAttendance() {
-        // insert same member+date twice → expect DataIntegrityViolationException
-    }
+    r.ServeHTTP(rr, withTestAuth(req))
+
+    require.Equal(t, http.StatusBadRequest, rr.Code)
+    require.Contains(t, rr.Body.String(), "VALIDATION_ERROR")
 }
 ```
 
-**What to test:**
-- Custom JPQL queries return correct results.
-- Unique constraints fire as expected.
-- Partial indexes enforce one-active-membership / one-active-assignment.
+Separate tests cover:
+- Unauthenticated (no cookie) → 401.
+- Receptionist calling `DELETE /members/:id` → 403.
+- Owner calling `POST /members` → 201.
+- Response JSON matches the expected DTO.
 
-### Controller / API Tests
+### Integration Tests — full stack against real PostgreSQL
 
-Use `@WebMvcTest` (loads only web layer, mocks service):
+Use `testcontainers-go/modules/postgres` to spin up a real PostgreSQL per test package. Run `goose up` on the container, then exercise the whole stack through the chi router.
 
-```java
-@WebMvcTest(MemberController.class)
-class MemberControllerTest {
+```go
+func TestCreateMembership_FullFlow(t *testing.T) {
+    pg := postgres.MustRun(t)                   // starts a container, returns conn string
+    pool := db.MustPool(t, pg.ConnString())
+    db.MustMigrate(t, pg.ConnString())          // goose up
 
-    @MockBean
-    private MemberService memberService;
+    app := buildTestApp(pool)
+    rr := app.POST(t, "/api/v1/members", createMemberBody())
+    require.Equal(t, 201, rr.Code)
 
-    @Test
-    void createMember_withInvalidPhone_returns400() {
-        mockMvc.perform(post("/api/v1/members")
-            .contentType(APPLICATION_JSON)
-            .content("{\"phone\":\"123\"}"))  // invalid
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
-    }
-
-    @Test
-    void createMember_withoutAuthentication_returns401() { ... }
-
-    @Test
-    void createMember_withReceptionistRole_returns201() { ... }
-
-    @Test
-    void deleteMember_withReceptionistRole_returns403() { ... }
+    // ... create plan ...
+    // ... create membership ...
 }
 ```
 
-**What to test:**
-- Request validation (400 on invalid input).
-- Authentication (401 without credentials).
-- Authorization (403 with wrong role).
-- Response shape matches expected DTO.
+Integration tests exercise handler → service → repository → PostgreSQL. They validate:
+- Unique constraints fire (`UNIQUE(phone)`, partial unique index for one-active-membership).
+- Foreign keys block deletes (`members` referenced by `memberships`).
+- Enum CHECK constraints reject unknown values.
+- `pg_dump` import/export round-trips cleanly (used in backup tests).
 
-### Integration Tests
+### Test Database Strategy
 
-Use `@SpringBootTest` with a real (test) database:
+- Unit tests: pure Go, no DB.
+- Handler tests: `httptest` + stub service.
+- Integration tests: `testcontainers-go/modules/postgres` with real PostgreSQL.
 
-```java
-@SpringBootTest
-@Transactional   // roll back after each test
-class CreateMembershipIntegrationTest {
+testcontainers was chosen rather than SQLite / H2 equivalents because this system relies on Postgres-specific features (partial unique indexes, `ILIKE`, `TIMESTAMPTZ`, sequences). Testing against anything else would miss constraint behaviour.
 
-    @Test
-    void createMembership_full_flow() {
-        // create member via API
-        // create membership via API
-        // verify response + database state
-    }
-
-    @Test
-    void createMembership_whenActiveAlreadyExists_returns409() { ... }
-}
-```
-
-Integration tests exercise the full stack: Controller → Service → Repository → Database.
-
-### Test Database
-
-- Unit tests: pure Java, no Spring context.
-- `@DataJpaTest`: H2 in-memory.
-- `@WebMvcTest`: H2 or mocked repositories.
-- `@SpringBootTest` integration tests: H2 in-memory or a dedicated test PostgreSQL (via Testcontainers).
-
-**OPEN DECISION:** Whether to use Testcontainers for integration tests (provides real PostgreSQL in Docker). Recommended for constraint testing that H2 does not replicate perfectly.
+Each integration test wraps its work in a transaction that is rolled back on test end, so tests do not pollute shared state within the same container.
