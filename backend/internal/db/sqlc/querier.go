@@ -13,21 +13,27 @@ import (
 type Querier interface {
 	CountMembers(ctx context.Context, arg CountMembersParams) (int64, error)
 	CountMembershipPlans(ctx context.Context, status *PlanStatus) (int64, error)
+	CountMemberships(ctx context.Context, arg CountMembershipsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	DeleteMember(ctx context.Context, id pgtype.UUID) error
 	DeleteMembershipPlan(ctx context.Context, id pgtype.UUID) error
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
+	ExpireOverdueMemberships(ctx context.Context) (int64, error)
 	GetDBVersion(ctx context.Context) (string, error)
 	GetMemberByID(ctx context.Context, id pgtype.UUID) (Member, error)
 	GetMemberByPhone(ctx context.Context, phone string) (Member, error)
+	GetMembershipByID(ctx context.Context, id pgtype.UUID) (Membership, error)
 	GetMembershipPlanByID(ctx context.Context, id pgtype.UUID) (MembershipPlan, error)
 	GetUserByEmail(ctx context.Context, lower string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error)
+	InsertMembership(ctx context.Context, arg InsertMembershipParams) (Membership, error)
 	InsertMembershipPlan(ctx context.Context, arg InsertMembershipPlanParams) (MembershipPlan, error)
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
 	ListMembers(ctx context.Context, arg ListMembersParams) ([]Member, error)
 	ListMembershipPlans(ctx context.Context, arg ListMembershipPlansParams) ([]MembershipPlan, error)
+	ListMemberships(ctx context.Context, arg ListMembershipsParams) ([]Membership, error)
+	ListMembershipsByMember(ctx context.Context, memberID pgtype.UUID) ([]Membership, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	UpdateMember(ctx context.Context, arg UpdateMemberParams) (Member, error)
 	UpdateMembershipPlan(ctx context.Context, arg UpdateMembershipPlanParams) (MembershipPlan, error)
