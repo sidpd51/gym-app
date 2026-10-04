@@ -14,6 +14,7 @@ import (
 type Querier interface {
 	CountAttendance(ctx context.Context, arg CountAttendanceParams) (int64, error)
 	CountExpenses(ctx context.Context, arg CountExpensesParams) (int64, error)
+	CountInventoryItems(ctx context.Context, arg CountInventoryItemsParams) (int64, error)
 	CountLeads(ctx context.Context, status *LeadStatus) (int64, error)
 	CountMembers(ctx context.Context, arg CountMembersParams) (int64, error)
 	CountMembershipPlans(ctx context.Context, status *PlanStatus) (int64, error)
@@ -23,6 +24,8 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	DeleteExpense(ctx context.Context, id pgtype.UUID) error
 	DeleteExpenseCategory(ctx context.Context, id pgtype.UUID) error
+	DeleteInventoryCategory(ctx context.Context, id pgtype.UUID) error
+	DeleteInventoryItem(ctx context.Context, id pgtype.UUID) error
 	DeleteLead(ctx context.Context, id pgtype.UUID) error
 	DeleteMember(ctx context.Context, id pgtype.UUID) error
 	DeleteMembershipPlan(ctx context.Context, id pgtype.UUID) error
@@ -36,6 +39,9 @@ type Querier interface {
 	GetExpenseByID(ctx context.Context, id pgtype.UUID) (Expense, error)
 	GetExpenseCategoryByID(ctx context.Context, id pgtype.UUID) (ExpenseCategory, error)
 	GetGymSettings(ctx context.Context) (GymSetting, error)
+	GetInventoryCategoryByID(ctx context.Context, id pgtype.UUID) (InventoryCategory, error)
+	GetInventoryItemByID(ctx context.Context, id pgtype.UUID) (InventoryItem, error)
+	GetInventoryItemByIDForUpdate(ctx context.Context, id pgtype.UUID) (InventoryItem, error)
 	GetLeadByID(ctx context.Context, id pgtype.UUID) (Lead, error)
 	GetMemberByID(ctx context.Context, id pgtype.UUID) (Member, error)
 	GetMemberByPhone(ctx context.Context, phone string) (Member, error)
@@ -50,6 +56,9 @@ type Querier interface {
 	InsertAttendance(ctx context.Context, arg InsertAttendanceParams) (Attendance, error)
 	InsertExpense(ctx context.Context, arg InsertExpenseParams) (Expense, error)
 	InsertExpenseCategory(ctx context.Context, arg InsertExpenseCategoryParams) (ExpenseCategory, error)
+	InsertInventoryCategory(ctx context.Context, arg InsertInventoryCategoryParams) (InventoryCategory, error)
+	InsertInventoryItem(ctx context.Context, arg InsertInventoryItemParams) (InventoryItem, error)
+	InsertInventoryTransaction(ctx context.Context, arg InsertInventoryTransactionParams) (InventoryTransaction, error)
 	InsertLead(ctx context.Context, arg InsertLeadParams) (Lead, error)
 	InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error)
 	InsertMembership(ctx context.Context, arg InsertMembershipParams) (Membership, error)
@@ -61,6 +70,9 @@ type Querier interface {
 	ListAttendanceByMember(ctx context.Context, memberID pgtype.UUID) ([]Attendance, error)
 	ListExpenseCategories(ctx context.Context) ([]ExpenseCategory, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]Expense, error)
+	ListInventoryCategories(ctx context.Context) ([]InventoryCategory, error)
+	ListInventoryItems(ctx context.Context, arg ListInventoryItemsParams) ([]InventoryItem, error)
+	ListInventoryTransactions(ctx context.Context, itemID pgtype.UUID) ([]InventoryTransaction, error)
 	ListLeads(ctx context.Context, arg ListLeadsParams) ([]Lead, error)
 	ListMembers(ctx context.Context, arg ListMembersParams) ([]Member, error)
 	ListMembershipPlans(ctx context.Context, arg ListMembershipPlansParams) ([]MembershipPlan, error)
@@ -75,6 +87,9 @@ type Querier interface {
 	SumRevenueBetween(ctx context.Context, arg SumRevenueBetweenParams) (decimal.Decimal, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
 	UpdateExpenseCategory(ctx context.Context, arg UpdateExpenseCategoryParams) (ExpenseCategory, error)
+	UpdateInventoryCategory(ctx context.Context, arg UpdateInventoryCategoryParams) (InventoryCategory, error)
+	UpdateInventoryItem(ctx context.Context, arg UpdateInventoryItemParams) (InventoryItem, error)
+	UpdateInventoryItemStock(ctx context.Context, arg UpdateInventoryItemStockParams) error
 	UpdateLead(ctx context.Context, arg UpdateLeadParams) (Lead, error)
 	UpdateMember(ctx context.Context, arg UpdateMemberParams) (Member, error)
 	UpdateMembershipPlan(ctx context.Context, arg UpdateMembershipPlanParams) (MembershipPlan, error)
