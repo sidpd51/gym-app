@@ -15,114 +15,116 @@ This is a **local LAN application**. It runs on a single machine inside the gym 
 
 | Component | Technology |
 |---|---|
-| Language | Java 21 (LTS) |
-| Framework | Spring Boot 3.x |
-| Build tool | **OPEN DECISION** (Maven recommended — see `02-system-architecture.md`) |
-| Database | **OPEN DECISION** (PostgreSQL 15+ recommended) |
-| Migration | **OPEN DECISION** (Flyway recommended) |
-| Auth | Spring Security — session-based or JWT (**OPEN DECISION**) |
+| Runtime | Node.js 22 LTS |
+| Language | TypeScript 5 (compiled to JavaScript via `tsc`) |
+| Framework | Fastify 5.x |
+| Package manager | pnpm |
+| Database | PostgreSQL 15+ |
+| Migration tool | `node-pg-migrate` (SQL-first versioned files) |
+| Auth | `@fastify/jwt` + `@fastify/cookie` (signed JWT in httpOnly cookie) |
+| Process manager | systemd running `node dist/server.js` |
 
-**Java 21** is the recommended LTS version. Spring Boot 3.x requires Java 17 minimum; Java 21 provides virtual threads and improved GC performance for future flexibility.
+**Node.js 22 LTS** is the recommended runtime. ESM-first (`"type": "module"` in `package.json`, `"module": "NodeNext"` in `tsconfig.json`). No bundler — `tsc` emits plain `.js` files to `dist/` which Node runs directly.
 
 ---
 
 ## Configuration
 
-Spring Boot reads configuration from `src/main/resources/application.yml`. Environment variables override individual properties at runtime using the `${ENV_VAR:default}` syntax.
+Configuration lives in environment variables, loaded via `env-schema`. The schema validates required-ness and types at startup — missing or malformed values cause the app to fail-fast before accepting any requests.
 
-### `application.yml` (template)
+### `src/config/env.ts`
 
-```yaml
-server:
-  port: ${PORT:8080}
+```ts
+import { envSchema } from 'env-schema';
+import { Type, Static } from '@sinclair/typebox';
 
-spring:
-  datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/gymdb}
-    username: ${DB_USER:gymuser}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate       # Flyway owns the schema; Hibernate must not modify it
-    show-sql: false
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
+const EnvSchema = Type.Object({
+  NODE_ENV:             Type.Union([Type.Literal('development'), Type.Literal('production'), Type.Literal('test')]),
+  PORT:                 Type.Integer({ default: 8080 }),
+  LOG_LEVEL:            Type.Union([Type.Literal('fatal'), Type.Literal('error'), Type.Literal('warn'), Type.Literal('info'), Type.Literal('debug'), Type.Literal('trace')], { default: 'info' }),
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info   # Spring Boot Actuator
-  endpoint:
-    health:
-      show-details: when-authorized
+  DATABASE_URL:         Type.String(),                       // postgres://user:pass@host:5432/db
+  DATABASE_POOL_MAX:    Type.Integer({ default: 20 }),
 
-gym:
-  frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
-  session-secret: ${SESSION_SECRET}
-  session-expiry-hours: ${SESSION_EXPIRY_HOURS:8}
+  JWT_SECRET:           Type.String({ minLength: 64 }),
+  COOKIE_SECRET:        Type.String({ minLength: 64 }),
+  SESSION_TTL_HOURS:    Type.Integer({ default: 8 }),
+
+  FRONTEND_ORIGIN:      Type.String({ default: 'http://localhost:5173' }),
+  BACKUP_DIR:           Type.String({ default: '/opt/gym-backups' }),
+});
+
+export type Env = Static<typeof EnvSchema>;
+
+export const env: Env = envSchema({ schema: EnvSchema, dotenv: true });
 ```
+
+Called once in `server.ts` and attached to the Fastify instance via `app.decorate('config', env)` so plugins and routes can read typed config via `app.config.XXX`.
 
 ### Required environment variables
 
 | Variable | Description | Required |
 |---|---|---|
-| `DB_PASSWORD` | Database password | Yes |
-| `SESSION_SECRET` | Session signing secret (≥64 random chars) | Yes |
-| `DATABASE_URL` | JDBC URL | No (default: localhost) |
-| `DB_USER` | Database username | No (default: `gymuser`) |
-| `FRONTEND_ORIGIN` | CORS allowed origin | No (default: localhost) |
+| `DATABASE_URL` | Postgres connection URL (`postgres://user:pass@host:5432/db`) | Yes |
+| `JWT_SECRET` | JWT signing secret (≥64 random chars) | Yes |
+| `COOKIE_SECRET` | Cookie signing secret (≥64 random chars) | Yes |
+| `NODE_ENV` | `development` / `production` / `test` | Yes |
 | `PORT` | Server listen port | No (default: `8080`) |
-| `SESSION_EXPIRY_HOURS` | Session TTL in hours | No (default: `8`) |
+| `LOG_LEVEL` | Pino log level | No (default: `info`) |
+| `FRONTEND_ORIGIN` | CORS allowed origin | No (default: localhost) |
+| `SESSION_TTL_HOURS` | JWT expiry in hours | No (default: `8`) |
+| `BACKUP_DIR` | Directory where `pg_dump` output is written | No (default: `/opt/gym-backups`) |
+| `DATABASE_POOL_MAX` | `postgres` driver connection pool size | No (default: `20`) |
 
 **Rules:**
-- No secrets in committed config files.
-- In production, set environment variables via a systemd `EnvironmentFile` or `/etc/environment`.
-- Commit an `application-example.yml` with placeholder values for developer reference.
+- No secrets in committed files. Commit a `.env.example` with placeholder values for developer reference.
+- In production, set environment variables via a systemd `EnvironmentFile`.
+- Generate secrets with `openssl rand -hex 32` (gives 64 hex chars = 256 bits).
 
 ---
 
 ## Directory Structure
 
 ```
-gym-backend/
+backend/
 ├── src/
-│   ├── main/
-│   │   ├── java/com/fitzone/gym/
-│   │   │   ├── common/          ← shared infrastructure
-│   │   │   ├── auth/
-│   │   │   ├── user/
-│   │   │   ├── member/
-│   │   │   ├── membershipplan/
-│   │   │   ├── membership/
-│   │   │   ├── payment/
-│   │   │   ├── attendance/
-│   │   │   ├── trainer/
-│   │   │   ├── assignment/
-│   │   │   ├── lead/
-│   │   │   ├── expense/
-│   │   │   ├── inventory/
-│   │   │   ├── equipment/
-│   │   │   ├── notification/
-│   │   │   ├── report/
-│   │   │   ├── settings/
-│   │   │   ├── auditlog/
-│   │   │   ├── search/
-│   │   │   └── backup/
-│   │   └── resources/
-│   │       ├── application.yml
-│   │       ├── application-prod.yml
-│   │       └── db/
-│   │           └── migration/   ← Flyway SQL (V1__init.sql, V2__seed.sql, ...)
-│   └── test/
-│       └── java/com/fitzone/gym/
-├── pom.xml                      ← Maven (or build.gradle for Gradle)
+│   ├── server.ts
+│   ├── app.ts
+│   ├── config/env.ts
+│   ├── db/
+│   │   ├── client.ts
+│   │   └── migrations/
+│   │       ├── 001_init.sql
+│   │       ├── 002_seed_settings.sql
+│   │       └── 003_code_sequences.sql
+│   ├── plugins/
+│   ├── common/
+│   └── modules/
+│       ├── auth/
+│       ├── user/
+│       ├── member/
+│       ├── membershipPlan/
+│       ├── membership/
+│       ├── payment/
+│       ├── attendance/
+│       ├── trainer/
+│       ├── assignment/
+│       ├── lead/
+│       ├── expense/
+│       ├── inventory/
+│       ├── equipment/
+│       ├── notification/
+│       ├── report/
+│       ├── settings/
+│       ├── auditLog/
+│       ├── search/
+│       └── backup/
+├── test/
+├── dist/                        ← tsc output; what gets deployed
+├── package.json
+├── pnpm-lock.yaml
+├── tsconfig.json
+├── .env.example
 └── .gitignore
 ```
 
@@ -130,19 +132,28 @@ gym-backend/
 
 ## Frontend Hosting
 
-The React SPA is a set of static files produced by `npm run build`. Two hosting options:
+The React SPA is a set of static files produced by `pnpm --filter frontend build` (output: `frontend/dist/`). Served by Fastify using `@fastify/static` on the same port as the API:
 
-**Option A — Spring Boot serves static files (Recommended)**
-- Copy `frontend/dist/` contents to `src/main/resources/static/`.
-- Spring Boot automatically serves everything in `static/` as HTTP resources.
-- Single port, single JAR, single process. Simplest LAN setup.
+```ts
+// plugins/static.ts
+import fastifyStatic from '@fastify/static';
+import path from 'node:path';
 
-**Option B — Separate static server**
-- Nginx or Caddy serves the frontend; Spring Boot serves only the API.
-- More flexible; allows HTTPS termination at the proxy level.
-- Spring Boot CORS config must allow the Nginx origin explicitly.
+await app.register(fastifyStatic, {
+  root: path.resolve(process.cwd(), '../frontend/dist'),
+  prefix: '/',
+});
 
-For a LAN gym system, **Option A** is recommended for operational simplicity.
+// SPA fallback: any non-API route returns index.html so client-side routing works
+app.setNotFoundHandler((req, reply) => {
+  if (req.url.startsWith('/api/')) {
+    return reply.code(404).send({ status: 404, code: 'NOT_FOUND', message: 'Route not found' });
+  }
+  return reply.sendFile('index.html');
+});
+```
+
+Single port, single process. Simplest LAN setup. If a separate static server is ever needed (e.g., to terminate HTTPS at an Nginx proxy), the Fastify app can simply skip `@fastify/static`.
 
 ---
 
@@ -152,16 +163,16 @@ For a LAN gym system, **Option A** is recommended for operational simplicity.
 Gym LAN (192.168.1.x)
 │
 ├── Server Machine (e.g., 192.168.1.100)
-│   ├── Spring Boot JAR (port 8080)
+│   ├── Node.js process (Fastify on port 8080)
 │   ├── PostgreSQL (port 5432, LAN-internal only)
-│   └── Frontend (static files served by Spring Boot on port 8080)
+│   └── Frontend (static files served by Fastify on port 8080)
 │
 ├── Reception Tablet / PC  (browser → http://192.168.1.100:8080)
 ├── Trainer Phone          (browser → http://192.168.1.100:8080)
 └── Owner Laptop           (browser → http://192.168.1.100:8080)
 ```
 
-**PostgreSQL must NOT be exposed to the internet.** Bind it to `localhost` only (`listen_addresses = 'localhost'` in `postgresql.conf`).
+**PostgreSQL must NOT be exposed to the internet.** Bind it to `localhost` only (`listen_addresses = 'localhost'` in `postgresql.conf`). The Node process connects to Postgres over the loopback interface.
 
 **OPEN DECISION:** Whether to configure HTTPS with a self-signed certificate or local CA. Recommended even on LAN to prevent credential interception.
 
@@ -169,7 +180,7 @@ Gym LAN (192.168.1.x)
 
 ## Process Management
 
-Use **systemd** to manage the Spring Boot process on Linux:
+Use **systemd** to manage the Node process on Linux. Same unit shape as a JVM service; only `ExecStart` differs:
 
 ```ini
 # /etc/systemd/system/gym-backend.service
@@ -183,12 +194,17 @@ Type=simple
 User=gymapp
 WorkingDirectory=/opt/gym-app
 EnvironmentFile=/opt/gym-app/.env
-ExecStart=/usr/bin/java -jar /opt/gym-app/gym-backend.jar \
-    --spring.profiles.active=prod
+ExecStart=/usr/bin/node /opt/gym-app/dist/server.js
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
+
+# Harden the process
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/gym-app /opt/gym-backups /var/log/gym-app
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target
@@ -204,57 +220,147 @@ sudo systemctl status gym-backend
 sudo journalctl -u gym-backend -f
 ```
 
-**OPEN DECISION:** On non-Linux servers (e.g., Windows), use NSSM (Non-Sucking Service Manager) to wrap the JAR as a Windows Service.
+Pino writes JSON lines to stdout; journald captures them. For human-friendly local tailing, pipe through `pino-pretty`:
+
+```bash
+sudo journalctl -u gym-backend -f -o cat | pino-pretty
+```
+
+### Windows Service (NSSM)
+
+The gym PC is typically a Windows machine. **Autostart on boot is required**, not optional — the owner powers the PC off at night, and the backend must come back up without manual intervention. Otherwise the first check-in next morning fails with "connection refused," and the catch-up mechanism in `08-cross-cutting-concerns.md` (Intermittent Availability) is bypassed because the process never starts.
+
+Wrap the Node process with **NSSM** (Non-Sucking Service Manager) and set startup type to Automatic:
+
+```powershell
+# Run as Administrator
+nssm install GymBackend "C:\Program Files\nodejs\node.exe" "C:\gym-app\dist\server.js"
+nssm set GymBackend AppDirectory "C:\gym-app"
+
+# Load env from a file instead of embedding secrets in the service config
+nssm set GymBackend AppEnvironmentExtra ":NODE_ENV=production"
+# Node 20+: --env-file picks up DATABASE_URL, JWT_SECRET, COOKIE_SECRET, etc.
+nssm set GymBackend AppParameters "--env-file=C:\gym-app\.env dist\server.js"
+
+# Logs (NSSM rotates them)
+nssm set GymBackend AppStdout "C:\gym-app\logs\stdout.log"
+nssm set GymBackend AppStderr "C:\gym-app\logs\stderr.log"
+nssm set GymBackend AppRotateFiles 1
+nssm set GymBackend AppRotateOnline 1
+nssm set GymBackend AppRotateBytes 10485760
+
+# Autostart + depend on PostgreSQL
+nssm set GymBackend Start SERVICE_AUTO_START
+nssm set GymBackend DependOnService postgresql-x64-15
+
+# Restart on crash (same intent as systemd Restart=on-failure)
+nssm set GymBackend AppExit Default Restart
+nssm set GymBackend AppRestartDelay 5000
+
+nssm start GymBackend
+```
+
+Verify after a reboot:
+
+```powershell
+Get-Service GymBackend
+# Status should be "Running"; StartType should be "Automatic"
+```
+
+### PostgreSQL autostart
+
+PostgreSQL must also autostart. The standard Windows installer sets this by default — verify:
+
+```powershell
+Get-Service postgresql-x64-15
+# StartType = Automatic
+```
+
+If the owner (or a previous admin) set it to Manual, start-order dependencies won't help: NSSM's `DependOnService` only waits for a service that's actually configured to start. Fix with:
+
+```powershell
+Set-Service postgresql-x64-15 -StartupType Automatic
+```
+
+### Daily shutdown contract
+
+Both the Linux and Windows setups above are configured so that this sequence is transparent to users:
+
+1. Owner powers off the PC at 22:00. All systemd / Windows services stop cleanly.
+2. Postgres flushes WAL and shuts down; no data loss.
+3. Overnight, the midnight expiry job, 02:00 backup job, and 09:00 reminder job all miss their fire times.
+4. Owner powers on at 06:00. Postgres starts first, then the gym-backend service starts.
+5. The scheduler plugin runs `runOverdueJobs()` before `.listen()` fires — expiring memberships, generating backup, sending any still-relevant reminders.
+6. By the time the first check-in happens at 06:30, state is correct.
+
+If any of autostart, service dependency ordering, or the `scheduled_job_runs` table is missing, step 5 silently doesn't happen and the system drifts a day behind reality.
 
 ---
 
 ## Health Check
 
-Spring Boot Actuator exposes a health endpoint when `spring-boot-starter-actuator` is on the classpath:
+A simple `/health` route — no auth, no business logic — that checks the DB connection with a trivial query:
+
+```ts
+// src/app.ts
+app.get('/health', { logLevel: 'warn' }, async () => {
+  await app.sql`SELECT 1`;
+  return { status: 'ok', uptime: process.uptime() };
+});
+```
 
 ```
-GET /actuator/health
+GET /health
 → 200 OK
-{
-  "status": "UP",
-  "components": {
-    "db":        { "status": "UP" },
-    "diskSpace": { "status": "UP" }
-  }
-}
+{ "status": "ok", "uptime": 123.4 }
+
+GET /health   (DB down)
+→ 500 (error handler returns INTERNAL_SERVER_ERROR; monitoring treats non-200 as unhealthy)
 ```
 
-This checks both the application process and the database connection in a single request. Used by systemd's `ExecStartPost` check, monitoring scripts, or a reverse proxy health probe.
+Used by monitoring scripts, a reverse proxy health probe, or a simple `curl` in cron. `logLevel: 'warn'` prevents the health check from flooding INFO logs.
 
 ---
 
 ## Database Migration Strategy
 
-**OPEN DECISION:** Flyway (recommended) or Liquibase. Examples below use Flyway.
-
-Flyway applies SQL migration files automatically at application startup when `spring.flyway.enabled=true`:
+`node-pg-migrate` applies SQL migrations from `src/db/migrations/`:
 
 ```
-src/main/resources/db/migration/
-├── V1__init.sql          ← creates all tables, enums, indexes, constraints
-├── V2__seed_settings.sql ← inserts the gym_settings row (id = 1)
-└── V3__...               ← future schema changes, always additive
+src/db/migrations/
+├── 001_init.sql                 ← creates all tables, enums, indexes, constraints
+├── 002_seed_settings.sql        ← inserts the gym_settings row (id = 1)
+├── 003_code_sequences.sql       ← creates all _code_seq sequences
+└── 004_...                      ← future schema changes, always additive
 ```
 
 **Rules:**
-- Migrations are **forward-only** in production. No destructive rollback migrations.
+- Migrations are **forward-only** in production. No destructive down-migrations.
 - Every schema change requires a new versioned file; never edit a previously applied migration.
-- `spring.jpa.hibernate.ddl-auto=validate` — Hibernate validates the schema against entity mappings but does not modify it. Flyway owns the schema.
+- Migrations are applied via an explicit CLI command (`pnpm migrate up`) separate from app startup. The Fastify process does **not** auto-run migrations on boot — this avoids race conditions when restarting during a schema change and keeps schema evolution a deliberate, operator-triggered step.
 
-**Startup sequence:**
-```
-1. Spring Boot starts
-2. Flyway detects and applies any pending migrations
-3. Hibernate validates entity mappings against the current schema
-4. Application begins accepting requests
+**Package.json scripts:**
+
+```json
+{
+  "scripts": {
+    "migrate:up":     "node-pg-migrate up --migrations-dir src/db/migrations --migration-filename-format utc",
+    "migrate:down":   "node-pg-migrate down --migrations-dir src/db/migrations",
+    "migrate:create": "node-pg-migrate create --migrations-dir src/db/migrations"
+  }
+}
 ```
 
-If Hibernate validation fails (entity mapping diverges from schema), the application fails to start — catching mapping errors before serving traffic.
+**Deployment sequence:**
+
+```
+1. Deploy new dist/ to server
+2. Run pnpm migrate up (apply any pending migrations)
+3. systemctl restart gym-backend
+4. Fastify starts; verifies DB connection; begins accepting requests
+```
+
+If a schema change is incompatible with the running app, follow the standard safe-migration pattern: deploy an app version that supports both old and new schemas, run the migration, deploy the version that uses only the new schema.
 
 ---
 
@@ -263,23 +369,24 @@ If Hibernate validation fails (entity mapping diverges from schema), the applica
 ### Build
 
 ```bash
-# Maven: produce a self-contained executable JAR
-./mvnw clean package -DskipTests
-
-# Output: target/gym-backend-<version>.jar
-
-# Gradle equivalent
-./gradlew clean build -x test
-# Output: build/libs/gym-backend-<version>.jar
+cd backend
+pnpm install --frozen-lockfile
+pnpm build          # runs: tsc -p tsconfig.build.json
+# Output: dist/server.js, dist/app.js, dist/modules/..., etc.
 ```
+
+Only `dist/`, `package.json`, `pnpm-lock.yaml`, and `src/db/migrations/` need to be deployed. Node's native ESM resolver loads the compiled `.js` files directly — no bundler, no `node_modules` bundling.
 
 ### Initial Setup
 
 ```bash
-# 1. Install Java 21 and PostgreSQL on the server machine
+# 1. Install Node.js 22 and PostgreSQL on the server machine
 # Ubuntu/Debian:
 sudo apt update
-sudo apt install openjdk-21-jre-headless postgresql postgresql-contrib
+sudo apt install -y curl ca-certificates postgresql postgresql-contrib
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+sudo apt install -y nodejs
+sudo npm install -g pnpm
 
 # 2. Create database and user
 sudo -u postgres psql <<'SQL'
@@ -290,50 +397,63 @@ SQL
 
 # 3. Create application directory and dedicated service user
 sudo useradd -r -s /bin/false gymapp
-sudo mkdir -p /opt/gym-app /opt/gym-backups
-sudo chown gymapp:gymapp /opt/gym-app /opt/gym-backups
+sudo mkdir -p /opt/gym-app /opt/gym-backups /var/log/gym-app
+sudo chown gymapp:gymapp /opt/gym-app /opt/gym-backups /var/log/gym-app
 
-# 4. Deploy the JAR
-sudo cp target/gym-backend.jar /opt/gym-app/gym-backend.jar
-sudo chown gymapp:gymapp /opt/gym-app/gym-backend.jar
+# 4. Deploy the compiled dist/ and dependencies
+sudo cp -r backend/dist backend/package.json backend/pnpm-lock.yaml backend/src/db /opt/gym-app/
+sudo -u gymapp pnpm --dir /opt/gym-app install --prod --frozen-lockfile
+sudo chown -R gymapp:gymapp /opt/gym-app
 
 # 5. Create the environment file (not committed to version control)
-sudo tee /opt/gym-app/.env <<'EOF'
-DATABASE_URL=jdbc:postgresql://localhost:5432/gymdb
-DB_USER=gymuser
-DB_PASSWORD=your_secure_password
-SESSION_SECRET=replace_with_64_char_random_string
+sudo tee /opt/gym-app/.env <<EOF
+NODE_ENV=production
+PORT=8080
+DATABASE_URL=postgres://gymuser:your_secure_password@localhost:5432/gymdb
+JWT_SECRET=$(openssl rand -hex 32)
+COOKIE_SECRET=$(openssl rand -hex 32)
 FRONTEND_ORIGIN=http://192.168.1.100:8080
+BACKUP_DIR=/opt/gym-backups
 EOF
 sudo chmod 600 /opt/gym-app/.env
 sudo chown gymapp:gymapp /opt/gym-app/.env
 
-# 6. Install and enable the systemd service
+# 6. Apply migrations
+sudo -u gymapp bash -c 'cd /opt/gym-app && pnpm migrate:up'
+
+# 7. Install and enable the systemd service
 sudo cp gym-backend.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable gym-backend
 sudo systemctl start gym-backend
 
-# Flyway migrations run automatically on first startup.
 # Verify:
-sudo journalctl -u gym-backend -f --lines=80
+sudo journalctl -u gym-backend -f --lines=50
+curl -s http://localhost:8080/health
 ```
 
 ### Routine Updates
 
 ```bash
 # On the development machine:
-./mvnw clean package -DskipTests
-scp target/gym-backend.jar gymserver:/opt/gym-app/gym-backend-new.jar
+cd backend
+pnpm install --frozen-lockfile
+pnpm build
+tar czf gym-backend-new.tar.gz dist/ package.json pnpm-lock.yaml src/db/
+scp gym-backend-new.tar.gz gymserver:/tmp/
 
 # On the server:
-sudo cp /opt/gym-app/gym-backend.jar /opt/gym-app/gym-backend-previous.jar  # keep rollback copy
-sudo mv /opt/gym-app/gym-backend-new.jar /opt/gym-app/gym-backend.jar
-sudo systemctl restart gym-backend
+sudo systemctl stop gym-backend                              # or leave running if backward-compatible
+sudo tar xzf /tmp/gym-backend-new.tar.gz -C /opt/gym-app/
+sudo -u gymapp pnpm --dir /opt/gym-app install --prod --frozen-lockfile
+sudo -u gymapp bash -c 'cd /opt/gym-app && pnpm migrate:up' # apply any new migrations
+sudo systemctl start gym-backend
 
-# Confirm startup (migrations + Hibernate validation logged here):
+# Confirm startup:
 sudo journalctl -u gym-backend -f --lines=50
 ```
+
+For zero-downtime restarts, use `systemctl reload-or-restart gym-backend` after confirming the new build is backward-compatible with the current schema.
 
 ---
 
@@ -341,11 +461,13 @@ sudo journalctl -u gym-backend -f --lines=50
 
 **Code rollback:**
 ```bash
-# Replace the JAR with the previous version and restart
-sudo cp /opt/gym-app/gym-backend-previous.jar /opt/gym-app/gym-backend.jar
+# Keep the previous dist/ as /opt/gym-app/dist-previous/ before each deploy.
+sudo rm -rf /opt/gym-app/dist
+sudo mv /opt/gym-app/dist-previous /opt/gym-app/dist
 sudo systemctl restart gym-backend
 
-# Note: if the update included schema migrations, a database restore is also required.
+# Note: if the update included schema migrations, a database restore is also required
+# because node-pg-migrate migrations are forward-only in production.
 ```
 
 **Database rollback:**
@@ -358,7 +480,7 @@ sudo systemctl restart gym-backend
 
 ### Backup Strategy
 
-**Recommendation: PostgreSQL `pg_dump` invoked from Spring Boot + a daily cron job**
+**Recommendation: PostgreSQL `pg_dump` invoked from a Fastify route handler + a daily cron job**
 
 ```bash
 # Manual one-off backup
@@ -368,6 +490,26 @@ pg_dump -U gymuser -d gymdb -f /opt/gym-backups/gymdb_$(date +%Y%m%d_%H%M%S).sql
 0 2 * * * pg_dump -U gymuser -d gymdb -f /opt/gym-backups/gymdb_$(date +\%Y\%m\%d).sql
 ```
 
+The backend route invokes `pg_dump` as a subprocess via Node's `child_process.spawn`:
+
+```ts
+// modules/backup/service.ts (illustrative)
+import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
+
+export async function createBackup(filename: string): Promise<void> {
+  const outPath = path.join(env.BACKUP_DIR, filename);
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn('pg_dump', ['-U', 'gymuser', '-d', 'gymdb'], {
+      env: { ...process.env, PGPASSWORD: env.DB_PASSWORD },
+    });
+    proc.stdout.pipe(createWriteStream(outPath));
+    proc.on('exit', (code) => code === 0 ? resolve() : reject(new Error(`pg_dump exited ${code}`)));
+    proc.on('error', reject);
+  });
+}
+```
+
 **Retention policy:**
 - Keep the last 30 daily backups.
 - Store backups in `/opt/gym-backups/` — separate from the application directory.
@@ -375,20 +517,22 @@ pg_dump -U gymuser -d gymdb -f /opt/gym-backups/gymdb_$(date +%Y%m%d_%H%M%S).sql
 
 ### Backup API Endpoints
 
-`POST /api/v1/backup/create` — OWNER only. Spring Boot invokes `pg_dump` via `ProcessBuilder`, saves the `.sql` file to the configured backup directory.
+`POST /api/v1/backup/create` — OWNER only. Spawns `pg_dump`, writes to `BACKUP_DIR`.
 
 `GET /api/v1/backup/list` — OWNER only. Lists backup files with timestamps and sizes.
 
-**OPEN DECISION:** Whether the backup endpoint streams the `.sql` file as an HTTP download or stores it server-side for a separate download step.
-
 ### Restore
 
-`POST /api/v1/backup/restore` — OWNER only. Accepts an uploaded `.sql` backup file and restores the database.
+`POST /api/v1/backup/restore` — OWNER only. Accepts an uploaded `.sql` backup file and restores the database using `psql`:
+
+```ts
+spawn('psql', ['-U', 'gymuser', '-d', 'gymdb', '-f', uploadedFilePath]);
+```
 
 **Restore operation must:**
 1. Require explicit confirmation from the Owner.
 2. Back up the current database before restoring.
-3. Restart the Spring Boot application after restore to reset any in-memory state.
+3. Restart the Fastify process after restore (`systemctl restart gym-backend`) to reset any in-memory state (connection pool, cached settings).
 4. Write an audit log entry after successful restore.
 
 **CRITICAL:** A restore operation overwrites all current data. This must be clearly communicated in the UI before the Owner confirms.
@@ -404,7 +548,7 @@ pg_dump -U gymuser -d gymdb -f /opt/gym-backups/gymdb_$(date +%Y%m%d_%H%M%S).sql
 | Database (500 active members, full history) | ~100–300 MB |
 | Daily backup files (30-day retention) | ~300 MB |
 | Application logs | ~50 MB/month (with rotation) |
-| Spring Boot JAR | ~60–80 MB |
+| Node.js runtime + dist/ + node_modules | ~150–200 MB |
 | **Total** | ~2–4 GB |
 
 A standard machine with 20 GB available is more than sufficient.
@@ -413,46 +557,51 @@ A standard machine with 20 GB available is more than sufficient.
 
 ## Logging
 
-Spring Boot uses **SLF4J + Logback** by default — no additional logging dependency is required.
+Fastify ships with Pino. Logs are JSON lines on stdout; systemd/journald captures them.
 
-### Logback configuration (`src/main/resources/logback-spring.xml`)
+### Pino configuration
 
-```xml
-<configuration>
-    <!-- Human-readable console output for local/dev -->
-    <springProfile name="local,dev">
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            </encoder>
-        </appender>
-        <root level="DEBUG">
-            <appender-ref ref="CONSOLE"/>
-        </root>
-        <logger name="com.fitzone.gym" level="DEBUG"/>
-        <logger name="org.hibernate.SQL" level="DEBUG"/>
-    </springProfile>
+Config lives in `src/app.ts` and `src/plugins/logger.ts`. In development, `pino-pretty` provides a human-readable transport; in production, raw JSON goes to stdout (and optionally to a rolling file via `pino-roll`):
 
-    <!-- Rolling file appender for production -->
-    <springProfile name="prod">
-        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>/var/log/gym-app/gym-backend.log</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>/var/log/gym-app/gym-backend.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
-                <maxHistory>30</maxHistory>
-            </rollingPolicy>
-            <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            </encoder>
-        </appender>
-        <root level="INFO">
-            <appender-ref ref="FILE"/>
-        </root>
-    </springProfile>
-</configuration>
+```ts
+// src/app.ts
+import Fastify from 'fastify';
+import { env } from './config/env.js';
+
+export async function buildApp() {
+  const app = Fastify({
+    logger: {
+      level: env.LOG_LEVEL,
+      redact: {
+        paths: ['password', 'passwordHash', 'token', 'secret', 'req.headers.cookie', 'req.headers.authorization'],
+        censor: '[REDACTED]',
+      },
+      transport: env.NODE_ENV === 'development'
+        ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'HH:MM:ss.l' } }
+        : undefined,
+    },
+  });
+  // ... register plugins and routes
+  return app;
+}
 ```
 
-Log files rotate daily and retain 30 days of history. System-level `logrotate` can supplement for disk-space alerts.
+For disk-backed rotation (if not relying on `journalctl --vacuum`), register `pino-roll` as the transport in production:
+
+```ts
+transport: {
+  target: 'pino-roll',
+  options: {
+    file: '/var/log/gym-app/gym-backend.log',
+    frequency: 'daily',
+    size: '50m',
+    mkdir: true,
+    limit: { count: 30 },
+  },
+}
+```
+
+Pino is extremely fast (JSON-serialization-only) so it adds negligible latency even at high request rates — not that we'll see them.
 
 ---
 
@@ -462,8 +611,8 @@ At this scale, monitoring is simple:
 
 | Check | Method |
 |---|---|
-| Backend running | `systemctl status gym-backend` or `GET /actuator/health` |
-| Database accessible | Included in `/actuator/health` (`db` component) |
+| Backend running | `systemctl status gym-backend` or `GET /health` |
+| Database accessible | `GET /health` runs `SELECT 1` as part of its check |
 | Disk space | `df -h` via cron alert |
 | Backup file present | Shell script: alert if newest backup in `/opt/gym-backups/` is >24h old |
 
@@ -477,33 +626,44 @@ At this scale, monitoring is simple:
 
 | Tool | Version |
 |---|---|
-| Java (JDK) | 21+ |
-| Maven | 3.9+ (or Gradle 8+) |
-| PostgreSQL | 15+ |
-| Node.js | 20+ (for the existing frontend) |
+| Node.js | 22+ |
+| pnpm | 9+ |
+| PostgreSQL | 15+ (or Docker) |
 
 ### Setup
 
 ```bash
 # Backend
-cd gym-backend
+cd backend
 
-# Copy and edit local configuration
-cp src/main/resources/application.yml src/main/resources/application-local.yml
-# Edit application-local.yml: set your local DB URL and credentials
+# Install dependencies
+pnpm install
 
-# Start with local profile (Flyway migrations run on first start)
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+# Copy and edit local environment
+cp .env.example .env
+# Edit .env: DATABASE_URL, JWT_SECRET, COOKIE_SECRET
+
+# Apply migrations
+pnpm migrate:up
+
+# Run in dev mode (tsx watches TypeScript files, reloads on change)
+pnpm dev
+# equivalent to: tsx watch src/server.ts
 
 # Run tests
-./mvnw test
+pnpm test                   # vitest
+pnpm test:watch             # watch mode
+pnpm test:coverage          # with coverage report
 
-# Build executable JAR
-./mvnw clean package
+# Build production artifact
+pnpm build                  # tsc -p tsconfig.build.json → dist/
+
+# Run production artifact locally
+node --env-file=.env dist/server.js
 
 # Frontend (existing — no changes)
-cd frontend
-npm run dev
+cd ../frontend
+pnpm dev
 ```
 
 ### Local database setup
@@ -521,6 +681,6 @@ docker run -d --name gym-postgres \
   -p 5432:5432 postgres:15
 ```
 
-**OPEN DECISION:** Whether to provide a `docker-compose.yml` in the repository for the development database.
+A `docker-compose.yml` committed to the repo is recommended for one-command local setup (`docker compose up -d` brings up Postgres on `localhost:5432`).
 
-Flyway migrations run automatically on application startup with `spring.flyway.enabled=true`. No separate migration command is needed during development.
+Migrations do **not** run automatically on `pnpm dev` — run `pnpm migrate:up` after pulling schema changes.
