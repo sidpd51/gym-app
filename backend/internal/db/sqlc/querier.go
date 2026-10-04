@@ -100,6 +100,12 @@ type Querier interface {
 	ListTrainers(ctx context.Context, arg ListTrainersParams) ([]Trainer, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	MarkLeadConverted(ctx context.Context, arg MarkLeadConvertedParams) error
+	ReportActiveMemberCount(ctx context.Context) (int64, error)
+	ReportAttendanceCount(ctx context.Context, arg ReportAttendanceCountParams) (int64, error)
+	ReportExpensesByMonth(ctx context.Context, arg ReportExpensesByMonthParams) ([]ReportExpensesByMonthRow, error)
+	ReportNewLeadCount(ctx context.Context, arg ReportNewLeadCountParams) (int64, error)
+	ReportNewMemberCount(ctx context.Context, arg ReportNewMemberCountParams) (int64, error)
+	ReportRevenueByMonth(ctx context.Context, arg ReportRevenueByMonthParams) ([]ReportRevenueByMonthRow, error)
 	SumExpensesBetween(ctx context.Context, arg SumExpensesBetweenParams) (decimal.Decimal, error)
 	SumRevenueBetween(ctx context.Context, arg SumRevenueBetweenParams) (decimal.Decimal, error)
 	UpdateEquipment(ctx context.Context, arg UpdateEquipmentParams) (Equipment, error)
