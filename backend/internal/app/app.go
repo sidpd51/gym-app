@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,6 +18,7 @@ import (
 	"github.com/sidpd51/gym-backend/internal/config"
 	appmw "github.com/sidpd51/gym-backend/internal/middleware"
 	"github.com/sidpd51/gym-backend/internal/modules/auth"
+	"github.com/sidpd51/gym-backend/internal/modules/member"
 	"github.com/sidpd51/gym-backend/internal/modules/user"
 )
 
@@ -37,6 +39,8 @@ func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler 
 	userRepo := user.NewRepository(pool)
 	userSvc := user.NewService(userRepo)
 	userHandler := user.NewHandler(userSvc)
+
+	memberHandler := member.NewHandler(member.NewService(pool))
 
 	cookieSecure := cfg.HTTPSCert != "" && cfg.HTTPSKey != ""
 	signer := authjwt.NewSigner(cfg.JWTSecret, cfg.SessionTTL)
@@ -61,7 +65,7 @@ func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler 
 				csrf.HttpOnly(true),
 				csrf.Secure(cookieSecure),
 				csrf.SameSite(csrf.SameSiteStrictMode),
-				csrf.TrustedOrigins([]string{cfg.FrontendOrigin}),
+				csrf.TrustedOrigins([]string{trustedHost(cfg.FrontendOrigin)}),
 			))
 
 			// /auth/me, /auth/profile, /csrf-token
@@ -71,6 +75,7 @@ func New(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool) http.Handler 
 			r.Group(func(r chi.Router) {
 				r.Use(appmw.RequireAuth(signer))
 				userHandler.Mount(r)
+				memberHandler.Mount(r)
 			})
 		})
 	})
@@ -87,6 +92,17 @@ func buildCORS(cfg *config.Config) func(http.Handler) http.Handler {
 		AllowCredentials: true,
 		MaxAge:           300,
 	})
+}
+
+// trustedHost extracts the "host:port" from a URL for gorilla/csrf's
+// TrustedOrigins option, which rejects full URLs. Falls back to the input
+// unchanged for backward compat.
+func trustedHost(originURL string) string {
+	u, err := url.Parse(originURL)
+	if err != nil || u.Host == "" {
+		return originURL
+	}
+	return u.Host
 }
 
 // deriveCSRFKey returns a 32-byte key for gorilla/csrf. The input secret is
