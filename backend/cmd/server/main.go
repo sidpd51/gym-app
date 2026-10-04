@@ -12,8 +12,11 @@ import (
 	"time"
 
 	"github.com/sidpd51/gym-backend/internal/app"
+	"github.com/sidpd51/gym-backend/internal/common"
 	"github.com/sidpd51/gym-backend/internal/config"
 	"github.com/sidpd51/gym-backend/internal/db"
+	"github.com/sidpd51/gym-backend/internal/modules/attendance"
+	"github.com/sidpd51/gym-backend/internal/modules/notification"
 )
 
 func main() {
@@ -35,6 +38,22 @@ func main() {
 	}
 	defer pool.Close()
 	log.Info("db pool ready")
+
+	// Scheduler: register jobs, then catch up on anything missed overnight
+	// before the HTTP server starts accepting traffic. See doc 09 §
+	// "Daily shutdown contract".
+	scheduler := common.NewScheduler(pool, log, attendance.IST)
+	if err := notification.RegisterJobs(scheduler, pool, log); err != nil {
+		log.Error("register scheduled jobs failed", slog.Any("err", err))
+		os.Exit(1)
+	}
+	catchUpCtx, catchUpCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	if err := scheduler.RunOverdueJobs(catchUpCtx); err != nil {
+		log.Error("overdue-job catch-up failed", slog.Any("err", err))
+	}
+	catchUpCancel()
+	scheduler.Start()
+	defer scheduler.Stop()
 
 	srv := &http.Server{
 		Addr:              ":" + strconv.Itoa(cfg.Port),

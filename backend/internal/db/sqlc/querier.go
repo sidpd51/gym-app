@@ -20,6 +20,7 @@ type Querier interface {
 	CountMembers(ctx context.Context, arg CountMembersParams) (int64, error)
 	CountMembershipPlans(ctx context.Context, status *PlanStatus) (int64, error)
 	CountMemberships(ctx context.Context, arg CountMembershipsParams) (int64, error)
+	CountNotifications(ctx context.Context, status *NotificationStatus) (int64, error)
 	CountPayments(ctx context.Context, arg CountPaymentsParams) (int64, error)
 	CountTrainers(ctx context.Context, status *TrainerStatus) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
@@ -36,6 +37,9 @@ type Querier interface {
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	EndAssignment(ctx context.Context, id pgtype.UUID) error
 	ExpireOverdueMemberships(ctx context.Context) (int64, error)
+	FindExpiredMemberships(ctx context.Context) ([]FindExpiredMembershipsRow, error)
+	// Members whose active membership expires within the next N days (IST).
+	FindMembershipsExpiringWithin(ctx context.Context, dollar_1 int32) ([]FindMembershipsExpiringWithinRow, error)
 	GetActiveAssignmentForMember(ctx context.Context, memberID pgtype.UUID) (MemberTrainerAssignment, error)
 	GetActiveMembershipForMember(ctx context.Context, memberID pgtype.UUID) (Membership, error)
 	GetDBVersion(ctx context.Context) (string, error)
@@ -71,6 +75,7 @@ type Querier interface {
 	InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error)
 	InsertMembership(ctx context.Context, arg InsertMembershipParams) (Membership, error)
 	InsertMembershipPlan(ctx context.Context, arg InsertMembershipPlanParams) (MembershipPlan, error)
+	InsertNotification(ctx context.Context, arg InsertNotificationParams) (NotificationRecord, error)
 	InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error)
 	InsertTrainer(ctx context.Context, arg InsertTrainerParams) (Trainer, error)
 	InsertUser(ctx context.Context, arg InsertUserParams) (User, error)
@@ -89,6 +94,7 @@ type Querier interface {
 	ListMembershipPlans(ctx context.Context, arg ListMembershipPlansParams) ([]MembershipPlan, error)
 	ListMemberships(ctx context.Context, arg ListMembershipsParams) ([]Membership, error)
 	ListMembershipsByMember(ctx context.Context, memberID pgtype.UUID) ([]Membership, error)
+	ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]NotificationRecord, error)
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPaymentsByMember(ctx context.Context, memberID pgtype.UUID) ([]Payment, error)
 	ListTrainers(ctx context.Context, arg ListTrainersParams) ([]Trainer, error)
