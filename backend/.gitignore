@@ -15,6 +15,9 @@ gym-backend.exe
 *.out
 coverage.*
 
+# Local run logs (never commit)
+*.log
+
 # Editor / OS
 .idea/
 .vscode/
