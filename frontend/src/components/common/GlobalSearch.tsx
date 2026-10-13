@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { usePermissions } from '@/features/auth/hooks/usePermissions'
 import { useDebounce } from '@/features/search/hooks/useDebounce'
 import { searchAll } from '@/features/search/utils/search.utils'
-import type { GlobalSearchResult, SearchPermissions } from '@/features/search/types/search.types'
+import type { GlobalSearchResult, SearchPermissions, SearchResultType, SearchGroup } from '@/features/search/types/search.types'
 
 function useSearchPermissions(): SearchPermissions {
   const { hasPermission } = usePermissions()
@@ -28,36 +28,26 @@ export function GlobalSearch() {
   const navigate = useNavigate()
   const permissions = useSearchPermissions()
   const debouncedQuery = useDebounce(query, 200)
-  const groups = searchAll(debouncedQuery, permissions)
-  const groupEntries = Object.entries(groups) as Array<[string, (typeof groups)[keyof typeof groups]]>
-  const totalResults = groupEntries.reduce((sum, [, g]) => sum + (g?.results.length ?? 0), 0)
+  const [groups, setGroups] = useState<Partial<Record<SearchResultType, SearchGroup>>>({})
+  const [totalResults, setTotalResults] = useState(0)
 
+  // Fetch search results when debounced query changes
   useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setOpen(true)
-      }
-    }
-    document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [])
+    ;(async () => {
+      const result = await searchAll(debouncedQuery, permissions)
+      setGroups(result)
+      const entries = Object.entries(result)
+      setTotalResults(entries.reduce((sum, [, g]) => sum + (g?.results.length ?? 0), 0))
+    })()
+  }, [debouncedQuery, permissions])
 
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50)
-    } else {
-      setQuery('')
-    }
-  }, [open])
+  function handleSelect(result: GlobalSearchResult) {
+    setOpen(false)
+    navigate(result.to)
+  }
 
   function handleClose() {
     setOpen(false)
-  }
-
-  function handleSelect(result: GlobalSearchResult) {
-    handleClose()
-    navigate(result.to)
   }
 
   return (
@@ -130,7 +120,7 @@ export function GlobalSearch() {
                 </p>
               )}
 
-              {groupEntries.map(([type, group]) => {
+              {Object.entries(groups).map(([type, group]) => {
                 if (!group) return null
                 return (
                   <div key={type}>
@@ -155,7 +145,9 @@ export function GlobalSearch() {
 
             {query && totalResults > 0 && (
               <div className="border-t border-zinc-100 px-4 py-2">
-                <p className="text-xs text-zinc-400">{totalResults} result{totalResults !== 1 ? 's' : ''} found</p>
+                <p className="text-xs text-zinc-400">
+                  {totalResults} result{totalResults !== 1 ? 's' : ''} found
+                </p>
               </div>
             )}
           </div>

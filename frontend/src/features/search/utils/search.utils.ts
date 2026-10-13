@@ -1,199 +1,129 @@
-import { membersMockData } from '@/features/members/data/members.mock'
-import { membershipPlansMockData } from '@/features/membership-plans/data/membership-plans.mock'
-import { membershipsMockData } from '@/features/memberships/data/memberships.mock'
-import { paymentsMockData } from '@/features/payments/data/payments.mock'
-import { trainersMockData } from '@/features/trainers/data/trainers.mock'
-import { leadsMockData } from '@/features/leads/data/leads.mock'
-import { expensesMockData } from '@/features/expenses/data/expenses.mock'
-import { inventoryMockData } from '@/features/inventory/data/inventory.mock'
-import { equipmentMockData } from '@/features/equipment/data/equipment.mock'
-import type { GlobalSearchResult, SearchGroup, SearchPermissions, SearchResultType } from '../types/search.types'
+import { apiClient } from '@/lib/api'
+import type {
+  SearchResultType,
+  SearchGroup,
+  SearchPermissions,
+  GlobalSearchResult,
+} from '../types/search.types'
 
-const MAX_PER_CATEGORY = 5
-
-function match(q: string, ...fields: (string | undefined)[]): boolean {
-  return fields.some((f) => f?.toLowerCase().includes(q))
+// Backend search response (internal/modules/search/search.go).
+export interface BackendSearchResponse {
+  Members: Array<{
+    ID: string
+    MemberCode: string
+    FirstName: string
+    LastName: string
+    Phone: string
+  }>
+  Trainers: Array<{
+    ID: string
+    TrainerCode: string
+    FirstName: string
+    LastName: string
+    Phone: string
+  }>
+  Leads: Array<{
+    ID: string
+    LeadCode: string
+    Name: string
+    Phone: string
+  }>
 }
 
-function searchMembers(q: string): GlobalSearchResult[] {
-  return membersMockData
-    .filter((m) =>
-      match(q, m.firstName, m.lastName, `${m.firstName} ${m.lastName}`, m.memberCode, m.phone, m.email)
-    )
-    .slice(0, MAX_PER_CATEGORY)
-    .map((m) => ({
-      id: m.id,
-      title: `${m.firstName} ${m.lastName}`,
-      subtitle: `${m.memberCode} · ${m.membershipPlan ?? 'No plan'}`,
-      to: `/members/${m.id}`,
-      type: 'members' as SearchResultType,
-    }))
+// Map backend members to frontend GlobalSearchResult.
+function mapBackendMember(payload: BackendSearchResponse['Members'][0]): GlobalSearchResult {
+  return {
+    id: payload.ID,
+    title: `${payload.FirstName} ${payload.LastName}`,
+    subtitle: `${payload.MemberCode} ${payload.Phone}`,
+    to: `/members/${payload.ID}`,
+    type: 'members' as SearchResultType,
+  }
 }
 
-function searchMembershipPlans(q: string): GlobalSearchResult[] {
-  return membershipPlansMockData
-    .filter((p) => match(q, p.name, p.description))
-    .slice(0, MAX_PER_CATEGORY)
-    .map((p) => ({
-      id: p.id,
-      title: p.name,
-      subtitle: `${p.durationInDays} days · ₹${p.price.toLocaleString('en-IN')}`,
-      to: `/membership-plans/${p.id}/edit`,
-      type: 'membershipPlans' as SearchResultType,
-    }))
+function mapBackendTrainer(payload: BackendSearchResponse['Trainers'][0]): GlobalSearchResult {
+  return {
+    id: payload.ID,
+    title: `${payload.FirstName} ${payload.LastName}`,
+    subtitle: `${payload.TrainerCode} ${payload.Phone}`,
+    to: `/trainers/${payload.ID}`,
+    type: 'trainers' as SearchResultType,
+  }
 }
 
-function searchMemberships(q: string): GlobalSearchResult[] {
-  const membersById = new Map(membersMockData.map((m) => [m.id, m]))
-  return membershipsMockData
-    .filter((ms) => {
-      const member = membersById.get(ms.memberId)
-      const memberName = member ? `${member.firstName} ${member.lastName}` : ''
-      return match(q, ms.planName, memberName, ms.id)
-    })
-    .slice(0, MAX_PER_CATEGORY)
-    .map((ms) => {
-      const member = membersById.get(ms.memberId)
-      const memberName = member ? `${member.firstName} ${member.lastName}` : ms.memberId
-      return {
-        id: ms.id,
-        title: `${memberName} — ${ms.planName}`,
-        subtitle: `${ms.startDate} to ${ms.endDate}`,
-        to: `/members/${ms.memberId}`,
-        type: 'memberships' as SearchResultType,
-      }
-    })
+function mapBackendLead(payload: BackendSearchResponse['Leads'][0]): GlobalSearchResult {
+  return {
+    id: payload.ID,
+    title: payload.Name,
+    subtitle: `${payload.LeadCode} ${payload.Phone}`,
+    to: `/leads/${payload.ID}`,
+    type: 'leads' as SearchResultType,
+  }
 }
 
-function searchPayments(q: string): GlobalSearchResult[] {
-  const membersById = new Map(membersMockData.map((m) => [m.id, m]))
-  return paymentsMockData
-    .filter((p) => {
-      const member = membersById.get(p.memberId)
-      const memberName = member ? `${member.firstName} ${member.lastName}` : ''
-      return match(q, p.id, memberName, p.paymentDate, p.paymentMethod)
-    })
-    .slice(0, MAX_PER_CATEGORY)
-    .map((p) => {
-      const member = membersById.get(p.memberId)
-      const memberName = member ? `${member.firstName} ${member.lastName}` : p.memberId
-      return {
-        id: p.id,
-        title: `${p.id} · ${memberName}`,
-        subtitle: `₹${p.amount.toLocaleString('en-IN')} · ${p.paymentDate}`,
-        to: `/payments/${p.id}`,
-        type: 'payments' as SearchResultType,
-      }
-    })
-}
-
-function searchTrainers(q: string): GlobalSearchResult[] {
-  return trainersMockData
-    .filter((t) =>
-      match(q, t.firstName, t.lastName, `${t.firstName} ${t.lastName}`, t.trainerCode, t.phone, t.specialization)
-    )
-    .slice(0, MAX_PER_CATEGORY)
-    .map((t) => ({
-      id: t.id,
-      title: `${t.firstName} ${t.lastName}`,
-      subtitle: `${t.trainerCode} · ${t.specialization ?? 'General'}`,
-      to: `/trainers/${t.id}`,
-      type: 'trainers' as SearchResultType,
-    }))
-}
-
-function searchLeads(q: string): GlobalSearchResult[] {
-  return leadsMockData
-    .filter((l) => match(q, l.name, l.leadCode, l.phone, l.email))
-    .slice(0, MAX_PER_CATEGORY)
-    .map((l) => ({
-      id: l.id,
-      title: l.name,
-      subtitle: `${l.leadCode} · ${l.status}`,
-      to: `/leads/${l.id}`,
-      type: 'leads' as SearchResultType,
-    }))
-}
-
-function searchExpenses(q: string): GlobalSearchResult[] {
-  return expensesMockData
-    .filter((e) => match(q, e.description, e.expenseCode, e.vendor))
-    .slice(0, MAX_PER_CATEGORY)
-    .map((e) => ({
-      id: e.id,
-      title: e.description,
-      subtitle: `${e.expenseCode} · ₹${e.amount.toLocaleString('en-IN')}`,
-      to: `/expenses/${e.id}`,
-      type: 'expenses' as SearchResultType,
-    }))
-}
-
-function searchInventory(q: string): GlobalSearchResult[] {
-  return inventoryMockData
-    .filter((i) => match(q, i.name, i.itemCode, i.description))
-    .slice(0, MAX_PER_CATEGORY)
-    .map((i) => ({
-      id: i.id,
-      title: i.name,
-      subtitle: `${i.itemCode} · Stock: ${i.currentStock} ${i.unit}`,
-      to: `/inventory/${i.id}`,
-      type: 'inventory' as SearchResultType,
-    }))
-}
-
-function searchEquipment(q: string): GlobalSearchResult[] {
-  return equipmentMockData
-    .filter((e) => match(q, e.name, e.equipmentCode, e.brand, e.model, e.location))
-    .slice(0, MAX_PER_CATEGORY)
-    .map((e) => ({
-      id: e.id,
-      title: e.name,
-      subtitle: `${e.equipmentCode} · ${e.brand ?? ''} ${e.model ?? ''}`.trim(),
-      to: `/equipment/${e.id}`,
-      type: 'equipment' as SearchResultType,
-    }))
-}
-
-const GROUP_LABELS: Record<SearchResultType, string> = {
-  members: 'Members',
-  membershipPlans: 'Membership Plans',
-  memberships: 'Memberships',
-  payments: 'Payments',
-  trainers: 'Trainers',
-  leads: 'Leads',
-  expenses: 'Expenses',
-  inventory: 'Inventory',
-  equipment: 'Equipment',
-}
-
-export function searchAll(
+// Fetch search results from the backend API.
+// The backend endpoint GET /api/v1/search?q=<query> returns Members, Trainers, Leads
+// based on the user's permissions and roles.
+export async function fetchSearchResults(
   query: string,
-  permissions: SearchPermissions
-): Partial<Record<SearchResultType, SearchGroup>> {
+): Promise<{
+  members: GlobalSearchResult[]
+  trainers: GlobalSearchResult[]
+  leads: GlobalSearchResult[]
+}> {
+  const res = await apiClient.get<BackendSearchResponse>(`/api/v1/search?q=${query}`)
+  const members = (res.Members || []).map(mapBackendMember)
+  const trainers = (res.Trainers || []).map(mapBackendTrainer)
+  const leads = (res.Leads || []).map(mapBackendLead)
+  return { members, trainers, leads }
+}
+
+// Search the live backend and return grouped results respecting permissions.
+export async function searchLive(
+  query: string,
+  permissions: SearchPermissions,
+): Promise<Partial<Record<SearchResultType, SearchGroup>>> {
   const q = query.trim().toLowerCase()
   if (!q) return {}
 
+  const { members, trainers, leads } = await fetchSearchResults(q)
+
   const groups: Partial<Record<SearchResultType, SearchGroup>> = {}
 
-  const runners: Array<[SearchResultType, keyof SearchPermissions, (q: string) => GlobalSearchResult[]]> = [
-    ['members', 'members', searchMembers],
-    ['membershipPlans', 'membershipPlans', searchMembershipPlans],
-    ['memberships', 'memberships', searchMemberships],
-    ['payments', 'payments', searchPayments],
-    ['trainers', 'trainers', searchTrainers],
-    ['leads', 'leads', searchLeads],
-    ['expenses', 'expenses', searchExpenses],
-    ['inventory', 'inventory', searchInventory],
-    ['equipment', 'equipment', searchEquipment],
-  ]
+  // Members
+  if (permissions.members && members.length > 0) {
+    groups['members'] = {
+      label: 'Members',
+      results: members,
+    }
+  }
 
-  for (const [type, permKey, fn] of runners) {
-    if (!permissions[permKey]) continue
-    const results = fn(q)
-    if (results.length > 0) {
-      groups[type] = { label: GROUP_LABELS[type], results }
+  // Trainers
+  if (permissions.trainers && trainers.length > 0) {
+    groups['trainers'] = {
+      label: 'Trainers',
+      results: trainers,
+    }
+  }
+
+  // Leads
+  if (permissions.leads && leads.length > 0) {
+    groups['leads'] = {
+      label: 'Leads',
+      results: leads,
     }
   }
 
   return groups
+}
+
+/**
+ * Backward-compatible wrapper: uses the live backend API.
+ * Kept for components that still import `searchAll`.
+ */
+export async function searchAll(
+  query: string,
+  permissions: SearchPermissions,
+): Promise<Partial<Record<SearchResultType, SearchGroup>>> {
+  return searchLive(query, permissions)
 }
