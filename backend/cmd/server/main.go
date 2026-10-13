@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/sidpd51/gym-backend/internal/app"
 	"github.com/sidpd51/gym-backend/internal/common"
 	"github.com/sidpd51/gym-backend/internal/config"
@@ -21,6 +23,8 @@ import (
 )
 
 func main() {
+	// Load .env if present (does not override already-set env vars).
+	_ = godotenv.Load()
 	cfg, err := config.Load()
 	if err != nil {
 		slog.New(slog.NewTextHandler(os.Stderr, nil)).

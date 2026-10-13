@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/sidpd51/gym-backend/internal/common"
@@ -31,6 +32,9 @@ import (
 const bcryptCost = 12
 
 func main() {
+	// Load .env if present (does not override already-set env vars).
+	_ = godotenv.Load()
+
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	databaseURL := os.Getenv("DATABASE_URL")
