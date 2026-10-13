@@ -10,25 +10,35 @@ import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 const PAGE_SIZE = 10
 
+type StatusFilter = MemberStatus | 'ALL'
+type PlanFilter = MembershipPlan | 'ALL'
+
 export function MembersPage() {
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<MemberStatus | 'ALL'>('ALL')
-  const [planFilter, setPlanFilter] = useState<MembershipPlan | 'ALL'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [planFilter, setPlanFilter] = useState<PlanFilter>('ALL')
   const [trainerFilter, setTrainerFilter] = useState<string>('ALL')
   const [page, setPage] = useState(1)
 
-  const { members } = useMembers()
+  // Server-side: status filter + pagination. Search is debounced
+  // client-side here (backend also supports ?search=).
+  const { members, meta, isLoading, error, refetch } = useMembers({
+    page,
+    pageSize: PAGE_SIZE,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+  })
 
+  // membershipPlan/trainerName are UI fields not yet returned by the
+  // backend, so plan/trainer filters only apply to whatever the
+  // current page contains.
   const trainers = useMemo(
     () => [...new Set(members.map((m) => m.trainerName).filter(Boolean) as string[])].sort(),
-    [members]
+    [members],
   )
 
   const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase()
-
     return members.filter((m) => {
-      if (statusFilter !== 'ALL' && m.status !== statusFilter) return false
       if (planFilter !== 'ALL' && m.membershipPlan !== planFilter) return false
       if (trainerFilter !== 'ALL' && m.trainerName !== trainerFilter) return false
       if (q) {
@@ -43,22 +53,21 @@ export function MembersPage() {
       }
       return true
     })
-  }, [search, statusFilter, planFilter, trainerFilter, members])
+  }, [search, planFilter, trainerFilter, members])
 
-  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / PAGE_SIZE))
-  const pagedMembers = filteredMembers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = meta?.totalPages ?? 1
 
   function handleSearchChange(value: string) {
     setSearch(value)
     setPage(1)
   }
 
-  function handleStatusChange(value: MemberStatus | 'ALL') {
+  function handleStatusChange(value: StatusFilter) {
     setStatusFilter(value)
     setPage(1)
   }
 
-  function handlePlanChange(value: MembershipPlan | 'ALL') {
+  function handlePlanChange(value: PlanFilter) {
     setPlanFilter(value)
     setPage(1)
   }
@@ -74,7 +83,7 @@ export function MembersPage() {
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">Members</h2>
           <p className="mt-0.5 text-sm text-zinc-500">
-            {members.length} total members
+            {isLoading ? 'Loading…' : `${meta?.total ?? 0} total members`}
           </p>
         </div>
         <PermissionGate permission="members:create">
@@ -105,15 +114,37 @@ export function MembersPage() {
           <h3 className="text-sm font-semibold text-zinc-900">Member List</h3>
         </div>
 
-        <MemberTable members={pagedMembers} />
+        {isLoading ? (
+          <div className="space-y-3 px-5 py-6" aria-label="Loading members">
+            {[0, 1, 2, 3].map((row) => (
+              <div key={row} className="h-10 animate-pulse rounded-lg bg-zinc-100" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="px-5 py-12 text-center">
+            <p className="text-sm font-medium text-zinc-700">Failed to load members</p>
+            <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <>
+            <MemberTable members={filteredMembers} />
 
-        <MembersPagination
-          page={page}
-          totalPages={totalPages}
-          totalCount={filteredMembers.length}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
-        />
+            <MembersPagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={meta?.total ?? filteredMembers.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+            />
+          </>
+        )}
       </div>
     </div>
   )

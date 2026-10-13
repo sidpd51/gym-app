@@ -15,7 +15,37 @@ import { MemberReminderHistory } from '../notifications/components/MemberReminde
 export function MemberDetailsPage() {
   const { memberId } = useParams<{ memberId: string }>()
 
-  const { member, supplementalData } = useMember(memberId)
+  const { member, supplementalData, isLoading, error, refetch } = useMember(memberId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading member">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-20 animate-pulse rounded-lg bg-zinc-100" />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="h-56 animate-pulse rounded-lg bg-zinc-100" />
+          <div className="h-56 animate-pulse rounded-lg bg-zinc-100" />
+        </div>
+        <div className="h-40 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load member</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!member) {
     return (
@@ -37,7 +67,18 @@ export function MemberDetailsPage() {
     )
   }
 
-  const supplemental = supplementalData!
+  // Supplemental slices come from GET /members/{id}/details.
+  // Backend currently returns empty slices (populated in later
+  // phases), so defaults keep the detail sections stable.
+  const supplemental = supplementalData ?? {
+    membershipHistory: [],
+    attendanceSummary: {
+      visitsThisMonth: 0,
+      lastVisitDate: null,
+      averageVisitsPerWeek: 0,
+    },
+    paymentHistory: [],
+  }
   const currentMembership = supplemental?.membershipHistory[0]
 
   return (

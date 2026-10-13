@@ -3,10 +3,12 @@ import { DatePicker } from '@/components/common/DatePicker'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/lib/api'
 import { createMemberSchema, type MemberFormValues } from '../schemas/member.schema'
+import { memberRepository } from '../api/members.repository'
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer not to say'] as const
 
@@ -55,10 +57,12 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 interface MemberFormProps {
   onCancel: () => void
+  successRedirectTo?: string
 }
 
-export function MemberForm({ onCancel }: MemberFormProps) {
-  const [submitted, setSubmitted] = useState(false)
+export function MemberForm({ onCancel, successRedirectTo = '/members' }: MemberFormProps) {
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
@@ -82,41 +86,45 @@ export function MemberForm({ onCancel }: MemberFormProps) {
     },
   })
 
-  function onSubmit(data: MemberFormValues) {
-    console.log('[CreateMember] form values:', data)
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">Form submitted successfully</h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. The member has not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => setSubmitted(false)}
-            className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-          >
-            Fill Again
-          </button>
-          <Link
-            to="/members"
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Members
-          </Link>
-        </div>
-      </div>
-    )
+  async function onSubmit(data: MemberFormValues) {
+    setServerError(null)
+    try {
+      await memberRepository.create({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        email: data.email || undefined,
+        joiningDate: data.joiningDate,
+        dateOfBirth: data.dateOfBirth || undefined,
+        gender: data.gender || undefined,
+        address: data.address || undefined,
+        emergencyContactName: data.emergencyContactName || undefined,
+        emergencyContactPhone: data.emergencyContactPhone || undefined,
+        emergencyContactRelationship: data.emergencyContactRelationship || undefined,
+      })
+      navigate(successRedirectTo)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label="Create member form">
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         {/* Personal Information */}
         <SectionCard title="Personal Information">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -299,7 +307,7 @@ export function MemberForm({ onCancel }: MemberFormProps) {
             disabled={isSubmitting}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Create Member
+            {isSubmitting ? 'Creating…' : 'Create Member'}
           </button>
         </div>
       </div>
