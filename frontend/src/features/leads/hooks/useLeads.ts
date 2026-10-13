@@ -1,10 +1,44 @@
-import { leadRepository } from '../api/leads.repository'
+import { useApiDetail, useApiList } from '@/lib/api/useApi'
+import type { ApiError, PaginatedResponse } from '@/lib/api'
+import { leadRepository, type LeadListQuery } from '../api/leads.repository'
 import type { Lead } from '../types/lead.types'
 
-export function useLeads(): { leads: Lead[] } {
-  return { leads: leadRepository.list() }
+interface LeadsResult {
+  leads: Lead[]
+  meta: PaginatedResponse<Lead>['meta'] | null
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
 }
 
-export function useLead(id: string | undefined): { lead: Lead | undefined } {
-  return { lead: id ? leadRepository.getById(id) : undefined }
+/**
+ * Async lead list backed by GET /api/v1/leads.
+ * `leads` defaults to [] while loading so existing cross-feature
+ * consumers (reports, search) keep working during fetch.
+ */
+export function useLeads(query?: LeadListQuery): LeadsResult {
+  const normalized: LeadListQuery = {
+    page: 1,
+    pageSize: 100,
+    ...query,
+  }
+  const { data, meta, isLoading, error, refetch } = useApiList<Lead>(normalized, (q) =>
+    leadRepository.list(q as LeadListQuery),
+  )
+  return { leads: data ?? [], meta, isLoading, error, refetch }
+}
+
+interface LeadResult {
+  lead: Lead | null
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
+}
+
+/** Async lead detail backed by GET /api/v1/leads/{id}. */
+export function useLead(id: string | undefined): LeadResult {
+  const { data, isLoading, error, refetch } = useApiDetail<Lead>(id, (leadId) =>
+    leadRepository.getById(leadId),
+  )
+  return { lead: data, isLoading, error, refetch }
 }

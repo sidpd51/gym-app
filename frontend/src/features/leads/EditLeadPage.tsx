@@ -7,7 +7,33 @@ export function EditLeadPage() {
   const { leadId } = useParams<{ leadId: string }>()
   const navigate = useNavigate()
 
-  const { lead } = useLead(leadId)
+  const { lead, isLoading, error, refetch } = useLead(leadId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading lead">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="h-96 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load lead</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!lead) {
     return (
@@ -49,6 +75,7 @@ export function EditLeadPage() {
 
       <LeadForm
         mode="edit"
+        leadId={lead.id}
         defaultValues={{
           name: lead.name,
           phone: lead.phone,
@@ -59,6 +86,7 @@ export function EditLeadPage() {
           notes: lead.notes ?? '',
         }}
         onCancel={() => navigate(`/leads/${lead.id}`)}
+        successRedirectTo={`/leads/${lead.id}`}
       />
     </div>
   )

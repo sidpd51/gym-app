@@ -3,10 +3,12 @@ import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/lib/api'
 import { useMembershipPlans } from '../../membership-plans/hooks/useMembershipPlans'
+import { leadRepository } from '../api/leads.repository'
 import { leadSchema, type LeadFormValues } from '../schemas/lead.schema'
 import { LEAD_SOURCE_LABELS } from '../types/lead.types'
 import type { LeadSource } from '../types/lead.types'
@@ -15,10 +17,10 @@ const SOURCE_OPTIONS = Object.entries(LEAD_SOURCE_LABELS) as [LeadSource, string
 
 function inputCls(hasError: boolean) {
   return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
+    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
-      : 'border-zinc-200 bg-white focus:ring-blue-500',
+      : 'border-zinc-200 bg-white focus:ring-blue-500'
   )
 }
 
@@ -62,14 +64,24 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 interface LeadFormProps {
   mode: 'create' | 'edit'
+  /** Required in edit mode (PATCH /api/v1/leads/{id}). */
+  leadId?: string
   defaultValues?: Partial<LeadFormValues>
   onCancel: () => void
+  successRedirectTo?: string
 }
 
-export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
-  const { plans } = useMembershipPlans()
+export function LeadForm({
+  mode,
+  leadId,
+  defaultValues,
+  onCancel,
+  successRedirectTo = '/leads',
+}: LeadFormProps) {
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
+  const { plans, isLoading: plansLoading } = useMembershipPlans()
   const activePlans = plans.filter((p) => p.status === 'ACTIVE')
-  const [submitted, setSubmitted] = useState(false)
 
   const {
     register,
@@ -90,40 +102,42 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
     },
   })
 
-  function onSubmit(data: LeadFormValues) {
-    console.log(`[LeadForm:${mode}] values:`, data)
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">
-          {mode === 'create' ? 'Lead created successfully' : 'Lead updated successfully'}
-        </h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          {mode === 'create' && (
-            <button
-              type="button"
-              onClick={() => setSubmitted(false)}
-              className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-            >
-              Add Another
-            </button>
-          )}
-          <Link
-            to="/leads"
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Leads
-          </Link>
-        </div>
-      </div>
-    )
+  async function onSubmit(data: LeadFormValues) {
+    setServerError(null)
+    try {
+      if (mode === 'create') {
+        await leadRepository.create({
+          name: data.name,
+          phone: data.phone,
+          email: data.email || undefined,
+          source: (data.source || undefined) as LeadSource | undefined,
+          interestedPlanId: data.interestedPlanId || undefined,
+          nextFollowUpDate: data.nextFollowUpDate || undefined,
+          notes: data.notes || undefined,
+        })
+      } else {
+        if (!leadId) {
+          setServerError('Missing lead id.')
+          return
+        }
+        await leadRepository.update(leadId, {
+          name: data.name,
+          phone: data.phone,
+          email: data.email || undefined,
+          source: (data.source || undefined) as LeadSource | undefined,
+          interestedPlanId: data.interestedPlanId || undefined,
+          nextFollowUpDate: data.nextFollowUpDate || undefined,
+          notes: data.notes || undefined,
+        })
+      }
+      navigate(successRedirectTo)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
@@ -133,6 +147,16 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
       aria-label={mode === 'create' ? 'Create lead form' : 'Edit lead form'}
     >
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         {/* Contact Information */}
         <SectionCard title="Contact Information">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -179,7 +203,7 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
                 error={!!errors.source}
                 {...register('source')}
               >
-                <option value="">Select source…</option>
+                <option value="">Select source</option>
                 {SOURCE_OPTIONS.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -196,9 +220,12 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
               <FormSelect
                 id="interestedPlanId"
                 error={!!errors.interestedPlanId}
+                disabled={plansLoading}
                 {...register('interestedPlanId')}
               >
-                <option value="">Select plan…</option>
+                <option value="">
+                  {plansLoading ? 'Loading plans…' : 'Select plan'}
+                </option>
                 {activePlans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} — ₹{p.price.toLocaleString('en-IN')}
@@ -238,7 +265,7 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
             <textarea
               id="notes"
               rows={3}
-              placeholder="Any additional information about this lead…"
+              placeholder="Any additional information about this lead"
               className={cn(inputCls(!!errors.notes), 'resize-none')}
               {...register('notes')}
             />
@@ -255,10 +282,16 @@ export function LeadForm({ mode, defaultValues, onCancel }: LeadFormProps) {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || plansLoading}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mode === 'create' ? 'Create Lead' : 'Save Changes'}
+            {isSubmitting
+              ? mode === 'create'
+                ? 'Creating…'
+                : 'Saving…'
+              : mode === 'create'
+                ? 'Create Lead'
+                : 'Save Changes'}
           </button>
         </div>
       </div>

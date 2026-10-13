@@ -3,9 +3,10 @@ import { ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useLead } from './hooks/useLeads'
 import { useMembershipPlan } from '../membership-plans/hooks/useMembershipPlans'
+import { leadRepository } from './api/leads.repository'
 import { LeadStatusBadge } from './components/LeadStatusBadge'
 import { LEAD_SOURCE_LABELS } from './types/lead.types'
-import type { LeadStatus } from './types/lead.types'
+import { ApiError } from '@/lib/api'
 
 function formatLocalDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -30,15 +31,50 @@ function DetailRow({ label, value }: DetailRowProps) {
   )
 }
 
-type ConvertState = 'idle' | 'confirming' | 'done'
+function getTodayString(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${mo}-${day}`
+}
+
+type ConvertState = 'idle' | 'confirming' | 'converting' | 'done'
 
 export function LeadDetailsPage() {
   const { leadId } = useParams<{ leadId: string }>()
-  const { lead } = useLead(leadId)
+  const { lead, isLoading, error, refetch } = useLead(leadId)
   const { plan: interestedPlan } = useMembershipPlan(lead?.interestedPlanId ?? undefined)
 
   const [convertState, setConvertState] = useState<ConvertState>('idle')
-  const [statusOverride, setStatusOverride] = useState<LeadStatus | null>(null)
+  const [convertError, setConvertError] = useState<string | null>(null)
+  const [convertedMemberId, setConvertedMemberId] = useState<string | null>(null)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading lead">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-72 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load lead</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!lead) {
     return (
@@ -60,14 +96,27 @@ export function LeadDetailsPage() {
     )
   }
 
-  const effectiveStatus = statusOverride ?? lead.status
+  const currentLead = lead
+  const isAlreadyConverted = currentLead.status === 'CONVERTED'
+  const isLost = currentLead.status === 'LOST'
 
-  const isAlreadyConverted = effectiveStatus === 'CONVERTED'
-  const isLost = effectiveStatus === 'LOST'
-
-  function handleConfirmConvert() {
-    setStatusOverride('CONVERTED')
-    setConvertState('done')
+  async function handleConfirmConvert() {
+    setConvertError(null)
+    setConvertState('converting')
+    try {
+      const memberId = await leadRepository.convert(currentLead.id, {
+        firstName: currentLead.name.split(' ')[0] ?? currentLead.name,
+        lastName: currentLead.name.split(' ').slice(1).join(' ') || '—',
+        joiningDate: getTodayString(),
+        phone: currentLead.phone,
+      })
+      setConvertedMemberId(memberId)
+      setConvertState('done')
+      refetch()
+    } catch (err) {
+      setConvertError(err instanceof ApiError ? err.message : 'Failed to convert lead.')
+      setConvertState('idle')
+    }
   }
 
   return (
@@ -80,6 +129,15 @@ export function LeadDetailsPage() {
         Back to Leads
       </Link>
 
+      {convertError && (
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700"
+          role="alert"
+        >
+          {convertError}
+        </div>
+      )}
+
       {/* Header */}
       <div className="rounded-lg border border-zinc-200 bg-white px-6 py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -87,7 +145,7 @@ export function LeadDetailsPage() {
             <h1 className="text-xl font-semibold text-zinc-900">{lead.name}</h1>
             <p className="mt-0.5 font-mono text-sm text-zinc-500">{lead.leadCode}</p>
             <div className="mt-2">
-              <LeadStatusBadge status={effectiveStatus} />
+              <LeadStatusBadge status={lead.status} />
             </div>
           </div>
 
@@ -124,8 +182,8 @@ export function LeadDetailsPage() {
                 {lead.email && <p>{lead.email}</p>}
               </div>
               <p className="mt-2 text-xs text-amber-600">
-                The lead information will be used to create a member. This is a mock operation —
-                no persistent changes will be made.
+                A new member record will be created from this lead. The lead will be marked as
+                converted. This action cannot be undone.
               </p>
               <div className="mt-4 flex gap-3">
                 <button
@@ -138,7 +196,7 @@ export function LeadDetailsPage() {
                 <button
                   type="button"
                   onClick={handleConfirmConvert}
-                  className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                  className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
                 >
                   Convert
                 </button>
@@ -155,10 +213,14 @@ export function LeadDetailsPage() {
             <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
             <div>
               <p className="text-sm font-semibold text-green-800">Lead converted successfully</p>
-              <p className="text-xs text-green-600">
-                Member creation will be connected to the real backend later. Changes have not been
-                persisted.
-              </p>
+              {convertedMemberId && (
+                <Link
+                  to={`/members/${convertedMemberId}`}
+                  className="text-xs text-green-600 hover:underline"
+                >
+                  View new member →
+                </Link>
+              )}
             </div>
           </div>
         </div>

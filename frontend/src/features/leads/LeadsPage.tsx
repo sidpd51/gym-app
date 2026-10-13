@@ -8,15 +8,21 @@ import type { LeadSource, LeadStatus } from './types/lead.types'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 export function LeadsPage() {
-  const { leads } = useLeads()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL')
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
 
+  const { leads, meta, isLoading, error, refetch } = useLeads({
+    page: 1,
+    pageSize: 100,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+  })
+
+  // source filter + search are not backend query params — client-side
+  // over the loaded page.
   const filteredLeads = useMemo(() => {
     const q = search.trim().toLowerCase()
     return leads.filter((l) => {
-      if (statusFilter !== 'ALL' && l.status !== statusFilter) return false
       if (sourceFilter !== 'ALL' && l.source !== sourceFilter) return false
       if (q) {
         const name = l.name.toLowerCase()
@@ -29,7 +35,7 @@ export function LeadsPage() {
       }
       return true
     })
-  }, [leads, search, statusFilter, sourceFilter])
+  }, [leads, search, sourceFilter])
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -43,12 +49,49 @@ export function LeadsPage() {
     setSourceFilter(value)
   }
 
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading leads">
+        <div className="h-6 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-12 animate-pulse rounded-lg bg-zinc-100" />
+        <div className="space-y-3 px-5 py-6">
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="h-10 animate-pulse rounded-lg bg-zinc-100" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900">Leads</h2>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white px-5 py-12 text-center">
+          <p className="text-sm font-medium text-zinc-700">Failed to load leads</p>
+          <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">Leads</h2>
-          <p className="mt-0.5 text-sm text-zinc-500">Manage enquiries and follow-ups.</p>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            {meta?.total ?? leads.length} lead{(meta?.total ?? leads.length) !== 1 ? 's' : ''}
+          </p>
         </div>
         <PermissionGate permission="leads:create">
           <Link
