@@ -28,8 +28,34 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 export function ExpenseDetailsPage() {
   const { expenseId } = useParams<{ expenseId: string }>()
-  const { expense } = useExpense(expenseId)
+  const { expense, isLoading, error, refetch } = useExpense(expenseId)
   const { categories } = useExpenseCategories()
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading expense">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-72 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load expense</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!expense) {
     return (
