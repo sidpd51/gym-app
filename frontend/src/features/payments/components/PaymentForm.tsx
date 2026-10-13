@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { DatePicker } from '@/components/common/DatePicker'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/lib/api'
 import { useMembers } from '../../members/hooks/useMembers'
-import { useMemberships } from '../../memberships/hooks/useMemberships'
+import { useMemberMemberships } from '../../memberships/hooks/useMemberships'
+import { paymentRepository } from '../api/payments.repository'
 import { recordPaymentSchema, type RecordPaymentFormValues } from '../schemas/payment.schema'
 import { PAYMENT_METHOD_LABELS } from '../types/payment.types'
 import type { PaymentMethod } from '../types/payment.types'
@@ -31,7 +33,7 @@ function formatLocalDate(dateStr: string): string {
 
 function inputCls(hasError: boolean) {
   return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
+    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
       : 'border-zinc-200 bg-white focus:ring-blue-500'
@@ -87,17 +89,21 @@ const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
 
 interface PaymentFormProps {
   onCancel: () => void
+  successRedirectTo?: string
 }
 
-export function PaymentForm({ onCancel }: PaymentFormProps) {
-  const [submitted, setSubmitted] = useState(false)
+export function PaymentForm({
+  onCancel,
+  successRedirectTo = '/payments',
+}: PaymentFormProps) {
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
-    reset,
     control,
     formState: { errors, isSubmitting },
   } = useForm<RecordPaymentFormValues>({
@@ -115,63 +121,63 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
 
   const memberId = watch('memberId')
 
-  const { members } = useMembers()
-  const { memberships } = useMemberships()
+  const { members, isLoading: membersLoading } = useMembers()
+  const { memberships, isLoading: membershipsLoading } = useMemberMemberships(
+    memberId || undefined,
+  )
 
   useEffect(() => {
     setValue('membershipId', '')
   }, [memberId, setValue])
 
-  const memberMemberships = memberships.filter((ms) => ms.memberId === memberId)
-
-  function onSubmit(data: RecordPaymentFormValues) {
-    console.log('[RecordPayment] values:', {
-      ...data,
-      amount: Number(data.amount),
-      paymentMethod: data.paymentMethod as PaymentMethod,
-      status: 'COMPLETED',
-    })
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">Payment recorded successfully</h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              reset()
-              setSubmitted(false)
-            }}
-            className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-          >
-            Record Another
-          </button>
-          <Link
-            to="/payments"
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Payments
-          </Link>
-        </div>
-      </div>
-    )
+  async function onSubmit(data: RecordPaymentFormValues) {
+    setServerError(null)
+    try {
+      await paymentRepository.create({
+        memberId: data.memberId,
+        membershipId: data.membershipId || undefined,
+        amount: Number(data.amount),
+        paymentMethod: data.paymentMethod as PaymentMethod,
+        paymentDate: data.paymentDate,
+        status: 'COMPLETED',
+        reference: data.reference || undefined,
+        notes: data.notes || undefined,
+      })
+      navigate(successRedirectTo)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label="Record payment form">
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         <SectionCard title="Member & Membership">
           <div className="space-y-4">
             <Field label="Member" required htmlFor="memberId" error={errors.memberId?.message}>
-              <FormSelect id="memberId" error={!!errors.memberId} {...register('memberId')}>
-                <option value="">Select a member</option>
+              <FormSelect
+                id="memberId"
+                error={!!errors.memberId}
+                disabled={membersLoading}
+                {...register('memberId')}
+              >
+                <option value="">
+                  {membersLoading ? 'Loading members…' : 'Select a member'}
+                </option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.firstName} {m.lastName} — {m.memberCode}
@@ -188,21 +194,19 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
               <FormSelect
                 id="membershipId"
                 error={!!errors.membershipId}
-                disabled={!memberId}
+                disabled={!memberId || membershipsLoading}
                 {...register('membershipId')}
               >
                 <option value="">
                   {!memberId
                     ? 'Select a member first'
-                    : memberMemberships.length === 0
-                      ? 'No memberships found for this member'
-                      : 'Select a membership (optional)'}
+                    : membershipsLoading
+                      ? 'Loading memberships…'
+                      : memberships.length === 0
+                        ? 'No memberships found for this member'
+                        : 'Select a membership (optional)'}
                 </option>
-                {memberMemberships.map((ms) => (
-                  <option key={ms.id} value={ms.id}>
-                    {ms.planName} — {formatLocalDate(ms.startDate)} → {formatLocalDate(ms.endDate)}
-                  </option>
-                ))}
+                {memberMembershipsList(memberships, formatLocalDate)}
               </FormSelect>
             </Field>
           </div>
@@ -309,13 +313,24 @@ export function PaymentForm({ onCancel }: PaymentFormProps) {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || membersLoading}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Record Payment
+            {isSubmitting ? 'Recording…' : 'Record Payment'}
           </button>
         </div>
       </div>
     </form>
   )
+}
+
+function memberMembershipsList(
+  memberships: ReturnType<typeof useMemberMemberships>['memberships'],
+  fmt: (s: string) => string,
+) {
+  return memberships.map((ms) => (
+    <option key={ms.id} value={ms.id}>
+      {ms.planName} — {fmt(ms.startDate)} → {fmt(ms.endDate)}
+    </option>
+  ))
 }

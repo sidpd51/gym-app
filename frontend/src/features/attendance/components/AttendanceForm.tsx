@@ -1,14 +1,11 @@
-import { useMemo } from 'react'
-import { useForm, Controller } from 'react-hook-form'
-import { DatePicker } from '@/components/common/DatePicker'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { CheckCircle2, AlertTriangle } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useMembers } from '../../members/hooks/useMembers'
-import { useMemberships } from '../../memberships/hooks/useMemberships'
-import { useAttendance } from '../hooks/useAttendance'
+import { useMarkAttendance } from '../hooks/useAttendance'
 import { markAttendanceSchema, type MarkAttendanceFormValues } from '../schemas/attendance.schema'
 
 function getTodayString(): string {
@@ -19,89 +16,63 @@ function getTodayString(): string {
   return `${y}-${mo}-${day}`
 }
 
-function getCurrentTimeString(): string {
-  const d = new Date()
-  const h = String(d.getHours()).padStart(2, '0')
-  const m = String(d.getMinutes()).padStart(2, '0')
-  return `${h}:${m}`
-}
-
-function inputCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition-colors',
-    hasError
-      ? 'border-red-400 focus:border-red-500'
-      : 'border-zinc-200 focus:border-zinc-400',
-  )
-}
-
-interface AttendanceFormProps {
-  onSubmit: (data: MarkAttendanceFormValues) => void
-  submitted: boolean
-}
-
-export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
-  const { members } = useMembers()
-  const { memberships } = useMemberships()
-  const { attendance } = useAttendance()
+/**
+ * Backend POST /api/v1/attendance accepts only memberId; the server
+ * stamps attendanceDate (today, Asia/Kolkata) and checkInTime itself.
+ * The date/time inputs from the old mock form are therefore not sent.
+ */
+export function AttendanceForm({
+  onCancel,
+  onSuccess,
+}: {
+  onCancel: () => void
+  onSuccess?: () => void
+}) {
+  const { members, isLoading: membersLoading } = useMembers()
+  const { mark, isMarking, error, reset } = useMarkAttendance(onSuccess)
+  const [success, setSuccess] = useState(false)
 
   const {
     register,
     handleSubmit,
-    watch,
-    control,
     formState: { errors, isSubmitting },
   } = useForm<MarkAttendanceFormValues>({
     resolver: zodResolver(markAttendanceSchema),
     defaultValues: {
       memberId: '',
       attendanceDate: getTodayString(),
-      checkInTime: getCurrentTimeString(),
+      checkInTime: '',
     },
   })
 
-  const memberId = watch('memberId')
-  const attendanceDate = watch('attendanceDate')
-
-  const businessRuleError = useMemo(() => {
-    if (!memberId || !attendanceDate) return null
-
-    const hasValidMembership = memberships.some(
-      (ms) =>
-        ms.memberId === memberId &&
-        ms.startDate <= attendanceDate &&
-        ms.endDate >= attendanceDate,
-    )
-    if (!hasValidMembership) {
-      return 'This member does not have an active membership for this date.'
+  async function onSubmit(data: MarkAttendanceFormValues) {
+    try {
+      await mark(data.memberId)
+      setSuccess(true)
+    } catch {
+      // error state handled by useMarkAttendance
     }
+  }
 
-    const alreadyMarked = attendance.some(
-      (a) => a.memberId === memberId && a.attendanceDate === attendanceDate,
-    )
-    if (alreadyMarked) {
-      return 'Attendance has already been recorded for this member on this date.'
-    }
-
-    return null
-  }, [memberId, attendanceDate, memberships, attendance])
-
-  if (submitted) {
+  if (success) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-white px-6 py-14 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" />
         <h3 className="mt-3 text-base font-semibold text-zinc-900">Attendance Marked</h3>
         <p className="mt-1 text-sm text-zinc-500">
-          The member has been marked present successfully.
+          The member has been marked present for today.
         </p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link
-            to="/attendance/new"
-            onClick={() => window.location.reload()}
+          <button
+            type="button"
+            onClick={() => {
+              reset()
+              setSuccess(false)
+            }}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
           >
             Mark Another
-          </Link>
+          </button>
           <Link
             to="/attendance"
             className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
@@ -115,13 +86,29 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {error && (
+        <div
+          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {error.message}
+        </div>
+      )}
+
       {/* Member */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-zinc-700">
           Member <span className="text-red-500">*</span>
         </label>
-        <FormSelect error={!!errors.memberId} {...register('memberId')}>
-          <option value="">Select a member…</option>
+        <FormSelect
+          error={!!errors.memberId}
+          disabled={membersLoading}
+          {...register('memberId')}
+        >
+          <option value="">
+            {membersLoading ? 'Loading members…' : 'Select a member'}
+          </option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>
               {m.firstName} {m.lastName} ({m.memberCode})
@@ -131,65 +118,26 @@ export function AttendanceForm({ onSubmit, submitted }: AttendanceFormProps) {
         {errors.memberId && (
           <p className="text-xs text-red-500">{errors.memberId.message}</p>
         )}
+        <p className="text-xs text-zinc-500">
+          Attendance will be marked for today (IST). Duplicate check-ins and
+          membership policy are enforced by the server.
+        </p>
       </div>
-
-      {/* Attendance Date */}
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-zinc-700">
-          Date <span className="text-red-500">*</span>
-        </label>
-        <Controller
-          name="attendanceDate"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              value={field.value ?? ''}
-              onChange={field.onChange}
-              error={!!errors.attendanceDate}
-            />
-          )}
-        />
-        {errors.attendanceDate && (
-          <p className="text-xs text-red-500">{errors.attendanceDate.message}</p>
-        )}
-      </div>
-
-      {/* Check-in Time */}
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-zinc-700">
-          Check-in Time <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="time"
-          {...register('checkInTime')}
-          className={inputCls(!!errors.checkInTime)}
-        />
-        {errors.checkInTime && (
-          <p className="text-xs text-red-500">{errors.checkInTime.message}</p>
-        )}
-      </div>
-
-      {/* Business rule warning */}
-      {businessRuleError && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-          <p className="text-sm text-amber-700">{businessRuleError}</p>
-        </div>
-      )}
 
       <div className="flex items-center justify-end gap-3 pt-1">
-        <Link
-          to="/attendance"
+        <button
+          type="button"
+          onClick={onCancel}
           className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
         >
           Cancel
-        </Link>
+        </button>
         <button
           type="submit"
-          disabled={isSubmitting || !!businessRuleError}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isSubmitting || isMarking}
+          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Mark Present
+          {isMarking ? 'Marking…' : 'Mark Present'}
         </button>
       </div>
     </form>

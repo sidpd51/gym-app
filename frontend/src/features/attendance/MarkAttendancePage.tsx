@@ -1,14 +1,10 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { AttendanceForm } from './components/AttendanceForm'
 
 export function MarkAttendancePage() {
-  const [submitted, setSubmitted] = useState(false)
-
-  function handleSubmit() {
-    setSubmitted(true)
-  }
+  const navigate = useNavigate()
 
   return (
     <div className="space-y-5">
@@ -21,11 +17,11 @@ export function MarkAttendancePage() {
           Back to Attendance
         </Link>
         <h2 className="mt-2 text-xl font-semibold text-zinc-900">Mark Attendance</h2>
-        <p className="mt-0.5 text-sm text-zinc-500">Record a member's check-in for a given date.</p>
+        <p className="mt-0.5 text-sm text-zinc-500">Record a member's check-in for today (IST).</p>
       </div>
 
       <div className="max-w-lg rounded-lg border border-zinc-200 bg-white p-6">
-        <AttendanceForm onSubmit={handleSubmit} submitted={submitted} />
+        <AttendanceForm onCancel={() => navigate('/attendance')} />
       </div>
     </div>
   )

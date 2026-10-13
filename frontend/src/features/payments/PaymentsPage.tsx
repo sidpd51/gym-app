@@ -17,19 +17,24 @@ export function PaymentsPage() {
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'ALL'>('ALL')
   const [page, setPage] = useState(1)
 
-  const { members } = useMembers()
-  const { payments } = usePayments()
+  const { members, isLoading: membersLoading } = useMembers()
+  const { payments, meta, isLoading, error, refetch } = usePayments({
+    page,
+    pageSize: PAGE_SIZE,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+  })
 
   const membersById = useMemo(
     () => Object.fromEntries(members.map((m) => [m.id, m])),
-    [members]
+    [members],
   )
 
+  // method filter is not a backend query param — applied client-side
+  // over the current page; search is also client-side.
   const filteredPayments = useMemo(() => {
     const q = search.trim().toLowerCase()
 
     return payments.filter((p) => {
-      if (statusFilter !== 'ALL' && p.status !== statusFilter) return false
       if (methodFilter !== 'ALL' && p.paymentMethod !== methodFilter) return false
       if (q) {
         const member = membersById[p.memberId] as (typeof membersById)[string] | undefined
@@ -50,10 +55,9 @@ export function PaymentsPage() {
       }
       return true
     })
-  }, [search, statusFilter, methodFilter, membersById, payments])
+  }, [search, methodFilter, membersById, payments])
 
-  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / PAGE_SIZE))
-  const pagedPayments = filteredPayments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = meta?.totalPages ?? 1
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -68,6 +72,41 @@ export function PaymentsPage() {
   function handleMethodChange(value: PaymentMethod | 'ALL') {
     setMethodFilter(value)
     setPage(1)
+  }
+
+  if (isLoading || membersLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading payments">
+        <div className="h-6 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-12 animate-pulse rounded-lg bg-zinc-100" />
+        <div className="space-y-3 px-5 py-6">
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="h-10 animate-pulse rounded-lg bg-zinc-100" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900">Payments</h2>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white px-5 py-12 text-center">
+          <p className="text-sm font-medium text-zinc-700">Failed to load payments</p>
+          <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (payments.length === 0) {
@@ -106,7 +145,7 @@ export function PaymentsPage() {
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">Payments</h2>
           <p className="mt-0.5 text-sm text-zinc-500">
-            {payments.length} total payments
+            {meta?.total ?? payments.length} total payments
           </p>
         </div>
         <PermissionGate permission="payments:record">
@@ -134,12 +173,12 @@ export function PaymentsPage() {
           <h3 className="text-sm font-semibold text-zinc-900">Payment History</h3>
         </div>
 
-        <PaymentTable payments={pagedPayments} membersById={membersById} />
+        <PaymentTable payments={filteredPayments} membersById={membersById} />
 
         <PaymentPagination
           page={page}
           totalPages={totalPages}
-          totalCount={filteredPayments.length}
+          totalCount={meta?.total ?? filteredPayments.length}
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
         />
