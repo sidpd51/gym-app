@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import type { MembershipPlanStatus } from './types/membership-plan.types'
 import { useMembershipPlans } from './hooks/useMembershipPlans'
+import { membershipPlanRepository } from './api/membership-plans.repository'
 import { MembershipPlanFilters } from './components/MembershipPlanFilters'
 import { MembershipPlanTable } from './components/MembershipPlanTable'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
@@ -12,19 +13,28 @@ type StatusFilter = MembershipPlanStatus | 'ALL'
 export function MembershipPlansPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
-  const [statusOverrides, setStatusOverrides] = useState<Record<string, MembershipPlanStatus>>({})
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null)
 
-  const { plans } = useMembershipPlans()
+  const { plans, meta, isLoading, error, refetch } = useMembershipPlans({
+    page: 1,
+    pageSize: 100,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+  })
 
-  function effectiveStatus(planId: string): MembershipPlanStatus {
-    return statusOverrides[planId] ?? plans.find((p) => p.id === planId)!.status
-  }
-
-  function handleToggleStatus(planId: string, current: MembershipPlanStatus) {
-    setStatusOverrides((prev) => ({
-      ...prev,
-      [planId]: current === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-    }))
+  async function handleToggleStatus(planId: string, current: MembershipPlanStatus) {
+    setToggleError(null)
+    setTogglingId(planId)
+    try {
+      await membershipPlanRepository.update(planId, {
+        status: current === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+      })
+      refetch()
+    } catch (err) {
+      setToggleError(err instanceof Error ? err.message : 'Failed to update status.')
+    } finally {
+      setTogglingId(null)
+    }
   }
 
   function handleSearchChange(value: string) {
@@ -37,16 +47,12 @@ export function MembershipPlansPage() {
 
   const filteredPlans = useMemo(() => {
     const q = search.trim().toLowerCase()
+    if (!q) return plans
     return plans.filter((plan) => {
-      const status = statusOverrides[plan.id] ?? plan.status
-      if (statusFilter !== 'ALL' && status !== statusFilter) return false
-      if (q) {
-        const searchable = `${plan.name} ${plan.description ?? ''}`.toLowerCase()
-        if (!searchable.includes(q)) return false
-      }
-      return true
+      const searchable = `${plan.name} ${plan.description ?? ''}`.toLowerCase()
+      return searchable.includes(q)
     })
-  }, [search, statusFilter, statusOverrides, plans])
+  }, [search, plans])
 
   return (
     <div className="space-y-5">
@@ -75,20 +81,55 @@ export function MembershipPlansPage() {
         onStatusChange={handleStatusChange}
       />
 
+      {toggleError && (
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700"
+          role="alert"
+        >
+          {toggleError}
+        </div>
+      )}
+
       <div className="rounded-lg border border-zinc-200 bg-white">
         <div className="border-b border-zinc-200 px-5 py-4">
           <h3 className="text-sm font-semibold text-zinc-900">
-            All Plans
-            <span className="ml-2 text-xs font-normal text-zinc-400">
-              {filteredPlans.length} of {plans.length}
-            </span>
+            {isLoading ? (
+              'Loading plans…'
+            ) : (
+              <>
+                All Plans
+                <span className="ml-2 text-xs font-normal text-zinc-400">
+                  {filteredPlans.length} of {meta?.total ?? plans.length}
+                </span>
+              </>
+            )}
           </h3>
         </div>
-        <MembershipPlanTable
-          plans={filteredPlans}
-          effectiveStatus={effectiveStatus}
-          onToggleStatus={handleToggleStatus}
-        />
+        {isLoading ? (
+          <div className="space-y-3 px-5 py-6" aria-label="Loading plans">
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="h-10 animate-pulse rounded-lg bg-zinc-100" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="px-5 py-12 text-center">
+            <p className="text-sm font-medium text-zinc-700">Failed to load plans</p>
+            <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <MembershipPlanTable
+            plans={filteredPlans}
+            pendingPlanId={togglingId}
+            onToggleStatus={handleToggleStatus}
+          />
+        )}
       </div>
     </div>
   )

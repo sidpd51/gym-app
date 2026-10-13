@@ -18,13 +18,13 @@ function formatPrice(amount: number): string {
 
 interface MembershipPlanTableProps {
   plans: MembershipPlan[]
-  effectiveStatus: (planId: string) => MembershipPlanStatus
+  pendingPlanId?: string | null
   onToggleStatus: (planId: string, current: MembershipPlanStatus) => void
 }
 
 export function MembershipPlanTable({
   plans,
-  effectiveStatus,
+  pendingPlanId,
   onToggleStatus,
 }: MembershipPlanTableProps) {
   if (plans.length === 0) {
@@ -52,8 +52,9 @@ export function MembershipPlanTable({
         </thead>
         <tbody>
           {plans.map((plan) => {
-            const status = effectiveStatus(plan.id)
+            const status = plan.status
             const isActive = status === 'ACTIVE'
+            const isPending = pendingPlanId === plan.id
             return (
               <tr key={plan.id} className="border-b border-zinc-50 last:border-0">
                 <td className="px-5 py-3">
@@ -82,14 +83,15 @@ export function MembershipPlanTable({
                     <button
                       type="button"
                       onClick={() => onToggleStatus(plan.id, status)}
+                      disabled={isPending}
                       className={
                         isActive
-                          ? 'rounded px-2.5 py-1 text-xs font-medium text-amber-600 ring-1 ring-inset ring-amber-300 hover:bg-amber-50'
-                          : 'rounded px-2.5 py-1 text-xs font-medium text-green-600 ring-1 ring-inset ring-green-300 hover:bg-green-50'
+                          ? 'rounded px-2.5 py-1 text-xs font-medium text-amber-600 ring-1 ring-inset ring-amber-300 hover:bg-amber-50 disabled:opacity-50'
+                          : 'rounded px-2.5 py-1 text-xs font-medium text-green-600 ring-1 ring-inset ring-green-300 hover:bg-green-50 disabled:opacity-50'
                       }
                       aria-label={`${isActive ? 'Deactivate' : 'Activate'} ${plan.name}`}
                     >
-                      {isActive ? 'Deactivate' : 'Activate'}
+                      {isPending ? 'Saving…' : isActive ? 'Deactivate' : 'Activate'}
                     </button>
                   </div>
                 </td>

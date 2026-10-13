@@ -23,6 +23,9 @@ export const membershipPlanSchema = z.object({
       const n = Number(v)
       return !isNaN(n) && n > 0
     }, 'Price must be greater than 0'),
+
+  // Only used in edit mode (backend PATCH accepts status).
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 })
 
 export type MembershipPlanFormValues = z.infer<typeof membershipPlanSchema>

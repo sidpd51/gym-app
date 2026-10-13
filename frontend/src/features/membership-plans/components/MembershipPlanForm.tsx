@@ -1,10 +1,13 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FormSelect } from '@/components/common/FormSelect'
+import { ApiError } from '@/lib/api'
 import { membershipPlanSchema, type MembershipPlanFormValues } from '../schemas/membership-plan.schema'
+import { membershipPlanRepository } from '../api/membership-plans.repository'
 
 function inputCls(hasError: boolean) {
   return cn(
@@ -44,12 +47,22 @@ function Field({ label, required, error, hint, children, htmlFor }: FieldProps) 
 
 interface MembershipPlanFormProps {
   mode: 'create' | 'edit'
+  /** Required in edit mode (PATCH /api/v1/membership-plans/{id}). */
+  planId?: string
   defaultValues?: Partial<MembershipPlanFormValues>
   onCancel: () => void
+  successRedirectTo?: string
 }
 
-export function MembershipPlanForm({ mode, defaultValues, onCancel }: MembershipPlanFormProps) {
-  const [submitted, setSubmitted] = useState(false)
+export function MembershipPlanForm({
+  mode,
+  planId,
+  defaultValues,
+  onCancel,
+  successRedirectTo = '/membership-plans',
+}: MembershipPlanFormProps) {
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
@@ -62,44 +75,42 @@ export function MembershipPlanForm({ mode, defaultValues, onCancel }: Membership
       description: '',
       durationInDays: '',
       price: '',
+      ...(mode === 'edit' ? { status: 'ACTIVE' as const } : {}),
       ...defaultValues,
     },
   })
 
-  function onSubmit(data: MembershipPlanFormValues) {
-    console.log(`[MembershipPlanForm:${mode}] values:`, data)
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">
-          {mode === 'create' ? 'Plan created successfully' : 'Plan updated successfully'}
-        </h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          {mode === 'create' && (
-            <button
-              type="button"
-              onClick={() => setSubmitted(false)}
-              className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-            >
-              Create Another
-            </button>
-          )}
-          <Link
-            to="/membership-plans"
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Plans
-          </Link>
-        </div>
-      </div>
-    )
+  async function onSubmit(data: MembershipPlanFormValues) {
+    setServerError(null)
+    try {
+      if (mode === 'create') {
+        await membershipPlanRepository.create({
+          name: data.name,
+          description: data.description || undefined,
+          durationInDays: Number(data.durationInDays),
+          price: Number(data.price),
+        })
+      } else {
+        if (!planId) {
+          setServerError('Missing plan id.')
+          return
+        }
+        await membershipPlanRepository.update(planId, {
+          name: data.name,
+          description: data.description || undefined,
+          durationInDays: Number(data.durationInDays),
+          price: Number(data.price),
+          status: data.status,
+        })
+      }
+      navigate(successRedirectTo)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
@@ -109,6 +120,16 @@ export function MembershipPlanForm({ mode, defaultValues, onCancel }: Membership
       aria-label={mode === 'create' ? 'Create membership plan form' : 'Edit membership plan form'}
     >
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         <div className="rounded-lg border border-zinc-200 bg-white px-6 py-5">
           <h2 className="text-sm font-semibold text-zinc-900">Plan Details</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -177,6 +198,15 @@ export function MembershipPlanForm({ mode, defaultValues, onCancel }: Membership
                 />
               </div>
             </Field>
+
+            {mode === 'edit' && (
+              <Field label="Status" required htmlFor="status" error={errors.status?.message}>
+                <FormSelect id="status" error={!!errors.status} {...register('status')}>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </FormSelect>
+              </Field>
+            )}
           </div>
         </div>
 
@@ -193,7 +223,13 @@ export function MembershipPlanForm({ mode, defaultValues, onCancel }: Membership
             disabled={isSubmitting}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mode === 'create' ? 'Create Plan' : 'Save Changes'}
+            {isSubmitting
+              ? mode === 'create'
+                ? 'Creating…'
+                : 'Saving…'
+              : mode === 'create'
+                ? 'Create Plan'
+                : 'Save Changes'}
           </button>
         </div>
       </div>

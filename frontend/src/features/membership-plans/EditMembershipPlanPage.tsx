@@ -7,7 +7,33 @@ export function EditMembershipPlanPage() {
   const { planId } = useParams<{ planId: string }>()
   const navigate = useNavigate()
 
-  const { plan } = useMembershipPlan(planId)
+  const { plan, isLoading, error, refetch } = useMembershipPlan(planId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading plan">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="h-96 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load plan</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!plan) {
     return (
@@ -48,11 +74,13 @@ export function EditMembershipPlanPage() {
 
       <MembershipPlanForm
         mode="edit"
+        planId={plan.id}
         defaultValues={{
           name: plan.name,
           description: plan.description ?? '',
           durationInDays: String(plan.durationInDays),
           price: String(plan.price),
+          status: plan.status,
         }}
         onCancel={() => navigate('/membership-plans')}
       />
