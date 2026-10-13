@@ -31,7 +31,8 @@ export interface InventoryItem {
   status: InventoryItemStatus
   description?: string
   createdAt: string
-  updatedAt: string
+  /** Backend has no updatedAt column; stock changes are tracked via transactions. */
+  updatedAt?: string
 }
 
 export interface InventoryTransaction {
@@ -42,4 +43,5 @@ export interface InventoryTransaction {
   transactionDate: string
   reference?: string
   notes?: string
+  createdAt?: string
 }

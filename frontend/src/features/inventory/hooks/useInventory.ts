@@ -1,22 +1,87 @@
-import { inventoryRepository } from '../api/inventory.repository'
-import type { InventoryItem, InventoryCategory, InventoryTransaction } from '../types/inventory.types'
+import { useApiDetail, useApiList, useApiQuery } from '@/lib/api/useApi'
+import type { ApiError, PaginatedResponse } from '@/lib/api'
+import {
+  inventoryCategoryRepository,
+  inventoryRepository,
+  type InventoryListQuery,
+} from '../api/inventory.repository'
+import type { InventoryCategory, InventoryItem, InventoryTransaction } from '../types/inventory.types'
 
-export function useInventory(): { items: InventoryItem[] } {
-  return { items: inventoryRepository.list() }
+interface InventoryResult {
+  items: InventoryItem[]
+  meta: PaginatedResponse<InventoryItem>['meta'] | null
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
 }
 
-export function useInventoryItem(id: string | undefined): { item: InventoryItem | undefined } {
-  return { item: id ? inventoryRepository.getById(id) : undefined }
-}
-
-export function useInventoryCategories(): { categories: InventoryCategory[] } {
-  return { categories: inventoryRepository.listCategories() }
-}
-
-export function useInventoryTransactions(itemId: string | undefined): {
-  transactions: InventoryTransaction[]
-} {
-  return {
-    transactions: itemId ? inventoryRepository.listTransactionsByItemId(itemId) : [],
+/**
+ * Async inventory list backed by GET /api/v1/inventory.
+ * `items` defaults to [] while loading so cross-feature consumers
+ * (reports, dashboards) keep working during fetch.
+ */
+export function useInventory(query?: InventoryListQuery): InventoryResult {
+  const normalized: InventoryListQuery = {
+    page: 1,
+    pageSize: 100,
+    ...query,
   }
+  const { data, meta, isLoading, error, refetch } = useApiList<InventoryItem>(
+    normalized,
+    (q) => inventoryRepository.list(q as InventoryListQuery),
+  )
+  return { items: data ?? [], meta, isLoading, error, refetch }
+}
+
+interface InventoryItemResult {
+  item: InventoryItem | null
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
+}
+
+/** Async item detail backed by GET /api/v1/inventory/{id}. */
+export function useInventoryItem(id: string | undefined): InventoryItemResult {
+  const { data, isLoading, error, refetch } = useApiDetail<InventoryItem>(id, (itemId) =>
+    inventoryRepository.getById(itemId),
+  )
+  return { item: data, isLoading, error, refetch }
+}
+
+interface InventoryCategoriesResult {
+  categories: InventoryCategory[]
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
+}
+
+/**
+ * Async category list backed by GET /api/v1/inventory-categories
+ * (non-paginated array endpoint).
+ */
+export function useInventoryCategories(): InventoryCategoriesResult {
+  const { data, isLoading, error, refetch } = useApiQuery<InventoryCategory[]>(
+    () => inventoryCategoryRepository.list(),
+    'inventory-categories',
+  )
+  return { categories: data ?? [], isLoading, error, refetch }
+}
+
+interface InventoryTransactionsResult {
+  transactions: InventoryTransaction[]
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
+}
+
+/**
+ * Async transaction list backed by GET /api/v1/inventory/{id}/transactions.
+ * Skips the fetch when itemId is undefined.
+ */
+export function useInventoryTransactions(itemId: string | undefined): InventoryTransactionsResult {
+  const { data, isLoading, error, refetch } = useApiQuery<InventoryTransaction[]>(
+    () => (itemId ? inventoryRepository.listTransactionsByItemId(itemId) : Promise.resolve([])),
+    `inventory-transactions-${itemId ?? 'none'}`,
+  )
+  return { transactions: data ?? [], isLoading, error, refetch }
 }

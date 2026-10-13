@@ -7,7 +7,33 @@ export function EditInventoryItemPage() {
   const { itemId } = useParams<{ itemId: string }>()
   const navigate = useNavigate()
 
-  const { item } = useInventoryItem(itemId)
+  const { item, isLoading, error, refetch } = useInventoryItem(itemId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading inventory item">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="h-96 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load item</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!item) {
     return (
@@ -49,6 +75,7 @@ export function EditInventoryItemPage() {
 
       <InventoryItemForm
         mode="edit"
+        itemId={item.id}
         defaultValues={{
           name: item.name,
           categoryId: item.categoryId,
@@ -57,6 +84,7 @@ export function EditInventoryItemPage() {
           description: item.description ?? '',
         }}
         onCancel={() => navigate(`/inventory/${item.id}`)}
+        successRedirectTo={`/inventory/${item.id}`}
       />
     </div>
   )

@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/lib/api'
+import { inventoryRepository } from '../api/inventory.repository'
 import { useInventoryCategories } from '../hooks/useInventory'
 import { inventoryItemSchema, type InventoryItemFormValues } from '../schemas/inventory.schema'
 
@@ -12,7 +14,7 @@ const UNIT_SUGGESTIONS = ['pcs', 'kg', 'litre', 'box', 'pack', 'bottle', 'roll',
 
 function inputCls(hasError: boolean) {
   return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
+    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
       : 'border-zinc-200 bg-white focus:ring-blue-500',
@@ -61,14 +63,24 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 interface InventoryItemFormProps {
   mode: 'create' | 'edit'
+  /** Required in edit mode (PATCH /api/v1/inventory/{id}). */
+  itemId?: string
   defaultValues?: Partial<InventoryItemFormValues>
   onCancel: () => void
+  successRedirectTo?: string
 }
 
-export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryItemFormProps) {
-  const { categories } = useInventoryCategories()
+export function InventoryItemForm({
+  mode,
+  itemId,
+  defaultValues,
+  onCancel,
+  successRedirectTo = '/inventory',
+}: InventoryItemFormProps) {
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
+  const { categories, isLoading: categoriesLoading } = useInventoryCategories()
   const activeCategories = categories.filter((c) => c.status === 'ACTIVE')
-  const [submitted, setSubmitted] = useState(false)
 
   const {
     register,
@@ -88,7 +100,8 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
     },
   })
 
-  function onSubmit(data: InventoryItemFormValues) {
+  async function onSubmit(data: InventoryItemFormValues) {
+    setServerError(null)
     if (mode === 'create') {
       const stock = data.currentStock ?? ''
       if (stock.trim() === '') {
@@ -100,39 +113,37 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
         return
       }
     }
-    console.log(`[InventoryItemForm:${mode}] values:`, data)
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">
-          {mode === 'create' ? 'Inventory item added successfully' : 'Inventory item updated successfully'}
-        </h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          {mode === 'create' && (
-            <button
-              type="button"
-              onClick={() => setSubmitted(false)}
-              className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-            >
-              Add Another
-            </button>
-          )}
-          <Link
-            to="/inventory"
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Inventory
-          </Link>
-        </div>
-      </div>
-    )
+    try {
+      if (mode === 'create') {
+        await inventoryRepository.create({
+          name: data.name,
+          categoryId: data.categoryId,
+          unit: data.unit,
+          currentStock: Number(data.currentStock),
+          minimumStock: Number(data.minimumStock),
+          description: data.description || undefined,
+        })
+      } else {
+        if (!itemId) {
+          setServerError('Missing item id.')
+          return
+        }
+        // Backend ItemUpdate: no categoryId/currentStock — stock changes via transactions only.
+        await inventoryRepository.update(itemId, {
+          name: data.name,
+          unit: data.unit,
+          minimumStock: Number(data.minimumStock),
+          description: data.description || undefined,
+        })
+      }
+      navigate(successRedirectTo)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
@@ -142,15 +153,20 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
       aria-label={mode === 'create' ? 'Add inventory item form' : 'Edit inventory item form'}
     >
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         <SectionCard title="Item Information">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <Field
-                label="Item Name"
-                required
-                htmlFor="name"
-                error={errors.name?.message}
-              >
+              <Field label="Item Name" required htmlFor="name" error={errors.name?.message}>
                 <input
                   id="name"
                   type="text"
@@ -171,9 +187,12 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
                 <FormSelect
                   id="categoryId"
                   error={!!errors.categoryId}
+                  disabled={mode === 'edit' || categoriesLoading}
                   {...register('categoryId')}
                 >
-                  <option value="">Select category…</option>
+                  <option value="">
+                    {categoriesLoading ? 'Loading categories…' : 'Select category'}
+                  </option>
                   {activeCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -181,6 +200,9 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
                     </option>
                   ))}
                 </FormSelect>
+                {mode === 'edit' && (
+                  <p className="mt-1 text-xs text-zinc-400">Category cannot be changed.</p>
+                )}
               </Field>
             </div>
 
@@ -238,7 +260,7 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
                   id="currentStock"
                   type="number"
                   min={0}
-                  step={0.01}
+                  step={1}
                   placeholder="0"
                   className={inputCls(!!errors.currentStock)}
                   {...register('currentStock')}
@@ -257,7 +279,7 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
                 id="minimumStock"
                 type="number"
                 min={0}
-                step={0.01}
+                step={1}
                 placeholder="0"
                 className={inputCls(!!errors.minimumStock)}
                 {...register('minimumStock')}
@@ -265,9 +287,11 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
             </Field>
 
             {mode === 'edit' && (
-              <div className="sm:col-span-2 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 sm:col-span-2">
                 <p className="text-xs text-zinc-500">
-                  <span className="font-medium text-zinc-700">Current stock cannot be edited here.</span>{' '}
+                  <span className="font-medium text-zinc-700">
+                    Current stock cannot be edited here.
+                  </span>{' '}
                   Stock levels are changed through inventory transactions.
                 </p>
               </div>
@@ -285,10 +309,16 @@ export function InventoryItemForm({ mode, defaultValues, onCancel }: InventoryIt
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || categoriesLoading}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mode === 'create' ? 'Add Item' : 'Save Changes'}
+            {isSubmitting
+              ? mode === 'create'
+                ? 'Adding…'
+                : 'Saving…'
+              : mode === 'create'
+                ? 'Add Item'
+                : 'Save Changes'}
           </button>
         </div>
       </div>

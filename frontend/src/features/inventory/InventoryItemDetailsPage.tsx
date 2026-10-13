@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 import { useInventoryItem, useInventoryCategories } from './hooks/useInventory'
 import { InventoryStatusBadge } from './components/InventoryStatusBadge'
 import { InventoryTransactionHistory } from './components/InventoryTransactionHistory'
-import { getInventoryStatus } from './utils/inventory.utils'
 
 function formatLocalDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -30,8 +29,34 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 export function InventoryItemDetailsPage() {
   const { itemId } = useParams<{ itemId: string }>()
-  const { item } = useInventoryItem(itemId)
+  const { item, isLoading, error, refetch } = useInventoryItem(itemId)
   const { categories } = useInventoryCategories()
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading inventory item">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-72 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load item</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!item) {
     return (
@@ -54,7 +79,6 @@ export function InventoryItemDetailsPage() {
   }
 
   const category = categories.find((c) => c.id === item.categoryId)
-  const derivedStatus = getInventoryStatus(item.currentStock, item.minimumStock)
 
   return (
     <div className="space-y-5">
@@ -73,7 +97,7 @@ export function InventoryItemDetailsPage() {
             <p className="font-mono text-sm font-semibold text-zinc-500">{item.itemCode}</p>
             <h1 className="mt-1 text-xl font-semibold text-zinc-900">{item.name}</h1>
             <div className="mt-2">
-              <InventoryStatusBadge status={derivedStatus} />
+              <InventoryStatusBadge status={item.status} />
             </div>
           </div>
           <Link
@@ -90,18 +114,22 @@ export function InventoryItemDetailsPage() {
         <div className="rounded-lg border border-zinc-200 bg-white px-6 py-5">
           <h2 className="text-sm font-semibold text-zinc-900">Item Information</h2>
           <div className="mt-4 space-y-4">
-            <DetailRow label="Category" value={category?.name ?? <span className="text-zinc-400">Unknown</span>} />
+            <DetailRow
+              label="Category"
+              value={category?.name ?? <span className="text-zinc-400">Unknown</span>}
+            />
             <DetailRow label="Unit" value={item.unit} />
             {item.description ? (
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Description</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                  Description
+                </p>
                 <p className="mt-0.5 text-sm leading-relaxed text-zinc-600">{item.description}</p>
               </div>
             ) : (
               <DetailRow label="Description" value={<span className="text-zinc-400">—</span>} />
             )}
             <DetailRow label="Added On" value={formatLocalDate(item.createdAt)} />
-            <DetailRow label="Last Updated" value={formatLocalDate(item.updatedAt)} />
           </div>
         </div>
 
@@ -110,29 +138,35 @@ export function InventoryItemDetailsPage() {
           <h2 className="text-sm font-semibold text-zinc-900">Stock Information</h2>
           <div className="mt-4 space-y-4">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Current Stock</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Current Stock
+              </p>
               <p className="mt-0.5 text-2xl font-bold tabular-nums text-zinc-900">
                 {item.currentStock}{' '}
                 <span className="text-base font-medium text-zinc-500">{item.unit}</span>
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Minimum Stock</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Minimum Stock
+              </p>
               <p className="mt-0.5 text-sm font-medium text-zinc-900">
                 {item.minimumStock} {item.unit}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Stock Status</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Stock Status
+              </p>
               <div className="mt-0.5">
-                <InventoryStatusBadge status={derivedStatus} />
+                <InventoryStatusBadge status={item.status} />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <InventoryTransactionHistory itemId={item.id} />
+      <InventoryTransactionHistory itemId={item.id} onRecorded={refetch} />
     </div>
   )
 }

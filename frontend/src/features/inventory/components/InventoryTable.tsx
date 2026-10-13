@@ -51,7 +51,7 @@ export function InventoryTable({ items, categoriesById }: InventoryTableProps) {
               Status
             </th>
             <th scope="col" className="px-5 py-3 text-left text-xs font-medium text-zinc-500">
-              Updated
+              Added
             </th>
             <th scope="col" className="px-5 py-3 text-right text-xs font-medium text-zinc-500">
               <span className="sr-only">Actions</span>
@@ -90,7 +90,7 @@ export function InventoryTable({ items, categoriesById }: InventoryTableProps) {
                   <InventoryStatusBadge status={derivedStatus} />
                 </td>
                 <td className="px-5 py-3 text-zinc-500">
-                  {formatLocalDate(item.updatedAt)}
+                  {formatLocalDate(item.createdAt)}
                 </td>
                 <td className="px-5 py-3 text-right">
                   <div className="flex items-center justify-end gap-3">
