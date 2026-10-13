@@ -1,11 +1,10 @@
-import { useMemo } from 'react'
-import { useForm, Controller } from 'react-hook-form'
-import { DatePicker } from '@/components/common/DatePicker'
+import { useForm } from 'react-hook-form'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertTriangle } from 'lucide-react'
 import { useTrainers } from '../../trainers/hooks/useTrainers'
+import { memberTrainerRepository } from '../api/member-trainer.repository'
 import { assignTrainerSchema, type AssignTrainerFormValues } from '../schemas/member-trainer.schema'
+import { ApiError } from '@/lib/api'
 
 function getTodayString(): string {
   const d = new Date()
@@ -16,21 +15,30 @@ function getTodayString(): string {
 }
 
 interface TrainerAssignmentFormProps {
+  memberId: string
   activeTrainerId: string | null
-  onSubmit: (data: AssignTrainerFormValues) => void
   onCancel: () => void
+  onSuccess: (trainerId: string) => void
 }
 
+/**
+ * Backend POST /api/v1/members/{memberId}/trainer accepts only
+ * trainerId; startDate is set server-side (today). The old mock
+ * form's startDate field is therefore not sent.
+ */
 export function TrainerAssignmentForm({
+  memberId,
   activeTrainerId,
-  onSubmit,
   onCancel,
+  onSuccess,
 }: TrainerAssignmentFormProps) {
+  const { trainers, isLoading: trainersLoading } = useTrainers()
+  const activeTrainers = trainers.filter((t) => t.status === 'ACTIVE')
+  const mode = activeTrainerId ? 'change' : 'assign'
+
   const {
     register,
     handleSubmit,
-    watch,
-    control,
     formState: { errors, isSubmitting },
   } = useForm<AssignTrainerFormValues>({
     resolver: zodResolver(assignTrainerSchema),
@@ -40,16 +48,20 @@ export function TrainerAssignmentForm({
     },
   })
 
-  const { trainers } = useTrainers()
-  const selectedTrainerId = watch('trainerId')
-
-  const isDuplicate = useMemo(
-    () => !!activeTrainerId && selectedTrainerId === activeTrainerId,
-    [activeTrainerId, selectedTrainerId],
-  )
-
-  const activeTrainers = trainers.filter((t) => t.status === 'ACTIVE')
-  const mode = activeTrainerId ? 'change' : 'assign'
+  async function onSubmit(data: AssignTrainerFormValues) {
+    try {
+      await memberTrainerRepository.assign(memberId, data.trainerId)
+      onSuccess(data.trainerId)
+    } catch (err) {
+      // Surface business-rule errors (e.g. trainer not found) via the
+      // form's error display through window alert as a fallback.
+      if (err instanceof ApiError) {
+        window.alert(err.message)
+      } else {
+        window.alert('Failed to assign trainer. Please try again.')
+      }
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -63,9 +75,12 @@ export function TrainerAssignmentForm({
             <FormSelect
               id="trainerId"
               error={!!errors.trainerId}
+              disabled={trainersLoading}
               {...register('trainerId')}
             >
-              <option value="">Select a trainer…</option>
+              <option value="">
+                {trainersLoading ? 'Loading trainers…' : 'Select a trainer'}
+              </option>
               {activeTrainers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.firstName} {t.lastName}
@@ -79,42 +94,10 @@ export function TrainerAssignmentForm({
               {errors.trainerId.message}
             </p>
           )}
+          <p className="mt-1 text-xs text-zinc-500">
+            Start date is set to today by the server.
+          </p>
         </div>
-
-        {/* Start date */}
-        <div>
-          <label htmlFor="startDate" className="block text-sm font-medium text-zinc-700">
-            Start Date <span className="text-red-500">*</span>
-          </label>
-          <div className="mt-1">
-            <Controller
-              name="startDate"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  error={!!errors.startDate}
-                />
-              )}
-            />
-          </div>
-          {errors.startDate && (
-            <p className="mt-1 text-xs text-red-600" role="alert">
-              {errors.startDate.message}
-            </p>
-          )}
-        </div>
-
-        {/* Duplicate warning */}
-        {isDuplicate && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-            <p className="text-sm text-amber-700">
-              This trainer is already assigned to this member.
-            </p>
-          </div>
-        )}
 
         <div className="flex justify-end gap-3 pt-1">
           <button
@@ -126,10 +109,10 @@ export function TrainerAssignmentForm({
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || isDuplicate}
+            disabled={isSubmitting || trainersLoading}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mode === 'assign' ? 'Assign Trainer' : 'Change Trainer'}
+            {isSubmitting ? 'Saving…' : mode === 'assign' ? 'Assign Trainer' : 'Change Trainer'}
           </button>
         </div>
       </div>

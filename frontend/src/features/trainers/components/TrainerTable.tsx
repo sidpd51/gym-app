@@ -5,11 +5,11 @@ import { TrainerStatusBadge } from './TrainerStatusBadge'
 
 interface TrainerTableProps {
   trainers: Trainer[]
-  effectiveStatus: (trainerId: string) => TrainerStatus
+  pendingTrainerId?: string | null
   onToggleStatus: (trainerId: string, current: TrainerStatus) => void
 }
 
-export function TrainerTable({ trainers, effectiveStatus, onToggleStatus }: TrainerTableProps) {
+export function TrainerTable({ trainers, pendingTrainerId, onToggleStatus }: TrainerTableProps) {
   if (trainers.length === 0) {
     return (
       <div className="px-5 py-12 text-center">
@@ -46,8 +46,9 @@ export function TrainerTable({ trainers, effectiveStatus, onToggleStatus }: Trai
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {trainers.map((trainer) => {
-            const status = effectiveStatus(trainer.id)
+            const status = trainer.status
             const isActive = status === 'ACTIVE'
+            const isPending = pendingTrainerId === trainer.id
             return (
               <tr key={trainer.id} className="hover:bg-zinc-50">
                 <td className="px-5 py-3">
@@ -84,14 +85,15 @@ export function TrainerTable({ trainers, effectiveStatus, onToggleStatus }: Trai
                     <button
                       type="button"
                       onClick={() => onToggleStatus(trainer.id, status)}
+                      disabled={isPending}
                       className={
                         isActive
-                          ? 'rounded px-2.5 py-1 text-xs font-medium text-amber-600 ring-1 ring-inset ring-amber-300 hover:bg-amber-50'
-                          : 'rounded px-2.5 py-1 text-xs font-medium text-green-600 ring-1 ring-inset ring-green-300 hover:bg-green-50'
+                          ? 'rounded px-2.5 py-1 text-xs font-medium text-amber-600 ring-1 ring-inset ring-amber-300 hover:bg-amber-50 disabled:opacity-50'
+                          : 'rounded px-2.5 py-1 text-xs font-medium text-green-600 ring-1 ring-inset ring-green-300 hover:bg-green-50 disabled:opacity-50'
                       }
                       aria-label={`${isActive ? 'Deactivate' : 'Activate'} ${trainer.firstName} ${trainer.lastName}`}
                     >
-                      {isActive ? 'Deactivate' : 'Activate'}
+                      {isPending ? 'Saving…' : isActive ? 'Deactivate' : 'Activate'}
                     </button>
                   </div>
                 </td>

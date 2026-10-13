@@ -6,8 +6,6 @@ import { useTrainers } from '../trainers/hooks/useTrainers'
 import { useMemberTrainer } from './hooks/useMemberTrainer'
 import { TrainerAssignmentForm } from './components/TrainerAssignmentForm'
 import { TrainerAvatar } from '../trainers/components/TrainerAvatar'
-import type { MemberTrainerAssignment, AssignmentStatus } from './types/member-trainer.types'
-import type { AssignTrainerFormValues } from './schemas/member-trainer.schema'
 
 function formatLocalDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -22,18 +20,38 @@ export function TrainerAssignmentPage() {
   const { memberId } = useParams<{ memberId: string }>()
   const navigate = useNavigate()
 
-  const { member } = useMember(memberId)
+  const { member, isLoading: memberLoading, error: memberError } = useMember(memberId)
   const { trainers } = useTrainers()
-  const { assignments: initialAssignments } = useMemberTrainer(memberId)
+  const {
+    currentAssignment,
+    isLoading: assignmentLoading,
+    refetch,
+  } = useMemberTrainer(memberId)
 
-  const [assignments, setAssignments] = useState<MemberTrainerAssignment[]>(
-    () => initialAssignments,
-  )
+  const [submitted, setSubmitted] = useState(false)
+  const [submittedTrainerId, setSubmittedTrainerId] = useState<string | null>(null)
 
-  const [submittedData, setSubmittedData] = useState<{
-    trainerId: string
-    wasChange: boolean
-  } | null>(null)
+  if (memberLoading || assignmentLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading assignment page">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="h-56 animate-pulse rounded-lg bg-zinc-100" />
+          <div className="h-56 animate-pulse rounded-lg bg-zinc-100" />
+        </div>
+      </div>
+    )
+  }
+
+  if (memberError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load member</h2>
+        <p className="mt-1 text-sm text-zinc-500">{memberError.message}</p>
+      </div>
+    )
+  }
 
   if (!member) {
     return (
@@ -55,39 +73,19 @@ export function TrainerAssignmentPage() {
     )
   }
 
-  const activeAssignment = assignments.find((a) => a.status === 'ACTIVE')
-  const activeTrainer = activeAssignment
-    ? (trainers.find((t) => t.id === activeAssignment.trainerId) ?? null)
+  const activeTrainer = currentAssignment
+    ? (trainers.find((t) => t.id === currentAssignment.trainerId) ?? null)
     : null
 
-  function handleSubmit(data: AssignTrainerFormValues) {
-    if (!member) return
-    const wasChange = !!activeAssignment
-
-    setAssignments((prev) => {
-      const ended = prev.map((a) =>
-        a.status === 'ACTIVE'
-          ? ({ ...a, status: 'ENDED' as AssignmentStatus, endDate: data.startDate })
-          : a,
-      )
-      return [
-        ...ended,
-        {
-          id: `MTA-NEW-${Date.now()}`,
-          memberId: member.id,
-          trainerId: data.trainerId,
-          startDate: data.startDate,
-          status: 'ACTIVE' as AssignmentStatus,
-        },
-      ]
-    })
-
-    setSubmittedData({ trainerId: data.trainerId, wasChange })
+  function handleSuccess(trainerId: string) {
+    setSubmittedTrainerId(trainerId)
+    setSubmitted(true)
+    refetch()
   }
 
   // Success state
-  if (submittedData) {
-    const newTrainer = trainers.find((t) => t.id === submittedData.trainerId)
+  if (submitted) {
+    const newTrainer = trainers.find((t) => t.id === submittedTrainerId)
     return (
       <div className="space-y-5">
         <Link
@@ -101,7 +99,7 @@ export function TrainerAssignmentPage() {
         <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-10 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
           <h3 className="mt-3 text-base font-semibold text-green-800">
-            {submittedData.wasChange ? 'Trainer changed successfully' : 'Trainer assigned successfully'}
+            {activeTrainer ? 'Trainer changed successfully' : 'Trainer assigned successfully'}
           </h3>
           {newTrainer && (
             <p className="mt-1 text-sm text-green-700">
@@ -112,9 +110,6 @@ export function TrainerAssignmentPage() {
               .
             </p>
           )}
-          <p className="mt-1 text-xs text-green-600">
-            Backend integration will be added in a later phase. Changes have not been persisted.
-          </p>
           <Link
             to={`/members/${member.id}`}
             className="mt-5 inline-flex items-center rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
@@ -160,7 +155,7 @@ export function TrainerAssignmentPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               Current Trainer
             </p>
-            {activeTrainer && activeAssignment ? (
+            {activeTrainer && currentAssignment ? (
               <div className="mt-3 flex items-center gap-3">
                 <TrainerAvatar
                   firstName={activeTrainer.firstName}
@@ -174,7 +169,7 @@ export function TrainerAssignmentPage() {
                     <p className="text-xs text-zinc-500">{activeTrainer.specialization}</p>
                   )}
                   <p className="mt-0.5 text-xs text-zinc-400">
-                    Assigned since {formatLocalDate(activeAssignment.startDate)}
+                    Assigned since {formatLocalDate(currentAssignment.startDate)}
                   </p>
                 </div>
               </div>
@@ -190,9 +185,10 @@ export function TrainerAssignmentPage() {
             {activeTrainer ? 'Change Trainer' : 'Assign Trainer'}
           </h2>
           <TrainerAssignmentForm
-            activeTrainerId={activeAssignment?.trainerId ?? null}
-            onSubmit={handleSubmit}
+            memberId={member.id}
+            activeTrainerId={currentAssignment?.trainerId ?? null}
             onCancel={() => navigate(`/members/${member.id}`)}
+            onSuccess={(trainerId) => handleSuccess(trainerId)}
           />
         </div>
       </div>

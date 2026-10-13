@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/lib/api'
+import { trainerRepository } from '../api/trainers.repository'
 import { trainerSchema, type TrainerFormValues } from '../schemas/trainer.schema'
 
 function inputCls(hasError: boolean) {
@@ -12,7 +14,7 @@ function inputCls(hasError: boolean) {
     'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
-      : 'border-zinc-200 bg-white focus:ring-blue-500',
+      : 'border-zinc-200 bg-white focus:ring-blue-500'
   )
 }
 
@@ -47,12 +49,22 @@ function Field({ label, required, error, htmlFor, children }: FieldProps) {
 
 interface TrainerFormProps {
   mode: 'create' | 'edit'
+  /** Required in edit mode (PATCH /api/v1/trainers/{id}). */
+  trainerId?: string
   defaultValues?: Partial<TrainerFormValues>
   onCancel: () => void
+  successRedirectTo?: string
 }
 
-export function TrainerForm({ mode, defaultValues, onCancel }: TrainerFormProps) {
-  const [submitted, setSubmitted] = useState(false)
+export function TrainerForm({
+  mode,
+  trainerId,
+  defaultValues,
+  onCancel,
+  successRedirectTo = '/trainers',
+}: TrainerFormProps) {
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
@@ -72,40 +84,39 @@ export function TrainerForm({ mode, defaultValues, onCancel }: TrainerFormProps)
     },
   })
 
-  function onSubmit(data: TrainerFormValues) {
-    console.log(`[TrainerForm:${mode}] values:`, data)
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">
-          {mode === 'create' ? 'Trainer created successfully' : 'Trainer updated successfully'}
-        </h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          {mode === 'create' && (
-            <button
-              type="button"
-              onClick={() => setSubmitted(false)}
-              className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-            >
-              Add Another
-            </button>
-          )}
-          <Link
-            to="/trainers"
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Trainers
-          </Link>
-        </div>
-      </div>
-    )
+  async function onSubmit(data: TrainerFormValues) {
+    setServerError(null)
+    try {
+      if (mode === 'create') {
+        await trainerRepository.create({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          email: data.email || undefined,
+          specialization: data.specialization || undefined,
+          joiningDate: data.joiningDate,
+        })
+      } else {
+        if (!trainerId) {
+          setServerError('Missing trainer id.')
+          return
+        }
+        await trainerRepository.update(trainerId, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          email: data.email || undefined,
+          specialization: data.specialization || undefined,
+        })
+      }
+      navigate(successRedirectTo)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
@@ -115,6 +126,16 @@ export function TrainerForm({ mode, defaultValues, onCancel }: TrainerFormProps)
       aria-label={mode === 'create' ? 'Create trainer form' : 'Edit trainer form'}
     >
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         {/* Personal Information */}
         <div className="rounded-lg border border-zinc-200 bg-white px-6 py-5">
           <h2 className="text-sm font-semibold text-zinc-900">Personal Information</h2>
@@ -238,7 +259,13 @@ export function TrainerForm({ mode, defaultValues, onCancel }: TrainerFormProps)
             disabled={isSubmitting}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mode === 'create' ? 'Create Trainer' : 'Save Changes'}
+            {isSubmitting
+              ? mode === 'create'
+                ? 'Creating…'
+                : 'Saving…'
+              : mode === 'create'
+                ? 'Create Trainer'
+                : 'Save Changes'}
           </button>
         </div>
       </div>

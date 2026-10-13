@@ -7,17 +7,39 @@ export function EditTrainerPage() {
   const { trainerId } = useParams<{ trainerId: string }>()
   const navigate = useNavigate()
 
-  const { trainer } = useTrainer(trainerId)
+  const { trainer, isLoading, error, refetch } = useTrainer(trainerId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading trainer">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="h-96 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load trainer</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!trainer) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <p className="text-4xl font-bold text-zinc-200">Not Found</p>
         <h2 className="mt-3 text-base font-semibold text-zinc-700">Trainer not found</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          No trainer with ID{' '}
-          <span className="font-mono font-medium text-zinc-700">{trainerId}</span> exists.
-        </p>
         <Link
           to="/trainers"
           className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
@@ -52,6 +74,7 @@ export function EditTrainerPage() {
 
       <TrainerForm
         mode="edit"
+        trainerId={trainer.id}
         defaultValues={{
           firstName: trainer.firstName,
           lastName: trainer.lastName,
@@ -61,6 +84,7 @@ export function EditTrainerPage() {
           joiningDate: trainer.joiningDate,
         }}
         onCancel={() => navigate(`/trainers/${trainer.id}`)}
+        successRedirectTo={`/trainers/${trainer.id}`}
       />
     </div>
   )
