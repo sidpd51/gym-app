@@ -19,15 +19,15 @@ fmt:
 vet:
 	go vet ./...
 
-# -------- db (docker-compose) --------
+# -------- db (docker-compose, repo root) --------
 db-up:
-	docker compose up -d
+	docker compose -f ../docker-compose.yml up -d
 
 db-down:
-	docker compose down
+	docker compose -f ../docker-compose.yml down
 
 db-logs:
-	docker compose logs -f postgres
+	docker compose -f ../docker-compose.yml logs -f postgres
 
 # -------- migrations (goose) --------
 # Loads DATABASE_URL from .env if present.

@@ -1,0 +1,8 @@
+.env
+.backups/
+bin/
+*.log
+*.exe
+docker-compose.yml
+.git/
+node_modules/
