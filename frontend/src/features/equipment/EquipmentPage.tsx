@@ -8,46 +8,83 @@ import type { EquipmentStatus } from './types/equipment.types'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 
 export function EquipmentPage() {
-  const { equipment } = useEquipment()
-  const { categories } = useEquipmentCategories()
-  const categoriesById = Object.fromEntries(categories.map((c) => [c.id, c]))
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | 'ALL'>('ALL')
 
+  const { equipment, meta, isLoading, error, refetch } = useEquipment({
+    page: 1,
+    pageSize: 100,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    categoryId: categoryFilter === 'ALL' ? undefined : categoryFilter,
+  })
+  const { categories, isLoading: categoriesLoading } = useEquipmentCategories()
+  const categoriesById = Object.fromEntries(categories.map((c) => [c.id, c]))
+
+  // search is not a backend query param — client-side over the loaded page.
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
+    if (!q) return equipment
     return equipment.filter((item) => {
-      if (categoryFilter !== 'ALL' && item.categoryId !== categoryFilter) return false
-      if (statusFilter !== 'ALL' && item.status !== statusFilter) return false
-
-      if (q) {
-        const name = item.name.toLowerCase()
-        const code = item.equipmentCode.toLowerCase()
-        const brand = (item.brand ?? '').toLowerCase()
-        const model = (item.model ?? '').toLowerCase()
-        const serial = (item.serialNumber ?? '').toLowerCase()
-        if (
-          !name.includes(q) &&
-          !code.includes(q) &&
-          !brand.includes(q) &&
-          !model.includes(q) &&
-          !serial.includes(q)
-        ) {
-          return false
-        }
-      }
-
-      return true
+      const name = item.name.toLowerCase()
+      const code = item.equipmentCode.toLowerCase()
+      const brand = (item.brand ?? '').toLowerCase()
+      const model = (item.model ?? '').toLowerCase()
+      const serial = (item.serialNumber ?? '').toLowerCase()
+      return (
+        name.includes(q) ||
+        code.includes(q) ||
+        brand.includes(q) ||
+        model.includes(q) ||
+        serial.includes(q)
+      )
     })
-  }, [equipment, search, categoryFilter, statusFilter])
+  }, [equipment, search])
+
+  if (isLoading || categoriesLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading equipment">
+        <div className="h-6 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-12 animate-pulse rounded-lg bg-zinc-100" />
+        <div className="space-y-3 px-5 py-6">
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="h-10 animate-pulse rounded-lg bg-zinc-100" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900">Equipment</h2>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white px-5 py-12 text-center">
+          <p className="text-sm font-medium text-zinc-700">Failed to load equipment</p>
+          <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">Equipment</h2>
-          <p className="mt-0.5 text-sm text-zinc-500">Track gym assets and maintenance history.</p>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            {meta?.total ?? equipment.length} item
+            {(meta?.total ?? equipment.length) !== 1 ? 's' : ''}
+          </p>
         </div>
         <PermissionGate permission="equipment:create">
           <Link

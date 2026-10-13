@@ -7,7 +7,33 @@ export function AddMaintenancePage() {
   const { equipmentId } = useParams<{ equipmentId: string }>()
   const navigate = useNavigate()
 
-  const { item: equipment } = useEquipmentItem(equipmentId)
+  const { item: equipment, isLoading, error, refetch } = useEquipmentItem(equipmentId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading equipment">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="h-96 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load equipment</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!equipment) {
     return (

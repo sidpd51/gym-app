@@ -1,7 +1,11 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
-import { useEquipmentItem, useEquipmentCategories, useEquipmentMaintenance } from './hooks/useEquipment'
+import {
+  useEquipmentItem,
+  useEquipmentCategories,
+  useEquipmentMaintenance,
+} from './hooks/useEquipment'
 import { EquipmentStatusBadge } from './components/EquipmentStatusBadge'
 import { EquipmentMaintenanceHistory } from './components/EquipmentMaintenanceHistory'
 
@@ -30,9 +34,35 @@ function DetailRow({ label, value }: DetailRowProps) {
 
 export function EquipmentDetailsPage() {
   const { equipmentId } = useParams<{ equipmentId: string }>()
-  const { item: equipment } = useEquipmentItem(equipmentId)
+  const { item: equipment, isLoading, error, refetch } = useEquipmentItem(equipmentId)
   const { categories } = useEquipmentCategories()
   const { maintenance: maintenanceRecordsRaw } = useEquipmentMaintenance(equipmentId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading equipment">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-72 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load equipment</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!equipment) {
     return (

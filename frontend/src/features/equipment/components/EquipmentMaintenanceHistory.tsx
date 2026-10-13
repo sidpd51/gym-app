@@ -26,10 +26,40 @@ interface EquipmentMaintenanceHistoryProps {
 }
 
 export function EquipmentMaintenanceHistory({ equipmentId }: EquipmentMaintenanceHistoryProps) {
-  const { maintenance: maintenanceRaw } = useEquipmentMaintenance(equipmentId)
+  const { maintenance: maintenanceRaw, isLoading, error, refetch } =
+    useEquipmentMaintenance(equipmentId)
   const records = [...maintenanceRaw].sort((a, b) =>
     a.maintenanceDate < b.maintenanceDate ? 1 : -1,
   )
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-zinc-200 bg-white px-6 py-5">
+        <h2 className="text-sm font-semibold text-zinc-900">Maintenance History</h2>
+        <div className="mt-4 space-y-3" aria-label="Loading maintenance history">
+          {[0, 1].map((row) => (
+            <div key={row} className="h-8 animate-pulse rounded bg-zinc-100" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-zinc-200 bg-white px-6 py-8 text-center">
+        <p className="text-sm font-medium text-zinc-700">Failed to load maintenance history</p>
+        <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-white">

@@ -3,9 +3,11 @@ import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@/components/common/DatePicker'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/lib/api'
+import { equipmentRepository } from '../api/equipment.repository'
 import {
   equipmentMaintenanceSchema,
   type EquipmentMaintenanceFormValues,
@@ -13,7 +15,10 @@ import {
 import { MAINTENANCE_TYPE_LABELS } from '../types/equipment.types'
 import type { MaintenanceType } from '../types/equipment.types'
 
-const maintenanceTypeOptions = Object.entries(MAINTENANCE_TYPE_LABELS) as [MaintenanceType, string][]
+const maintenanceTypeOptions = Object.entries(MAINTENANCE_TYPE_LABELS) as [
+  MaintenanceType,
+  string,
+][]
 
 function getTodayString(): string {
   const d = new Date()
@@ -25,7 +30,7 @@ function getTodayString(): string {
 
 function inputCls(hasError: boolean) {
   return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
+    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
       : 'border-zinc-200 bg-white focus:ring-blue-500',
@@ -73,10 +78,16 @@ function SectionCard({ title, children }: { title: string; children: React.React
 interface MaintenanceFormProps {
   equipmentId: string
   onCancel: () => void
+  successRedirectTo?: string
 }
 
-export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps) {
-  const [submitted, setSubmitted] = useState(false)
+export function MaintenanceForm({
+  equipmentId,
+  onCancel,
+  successRedirectTo,
+}: MaintenanceFormProps) {
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
@@ -96,47 +107,41 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
     },
   })
 
-  function onSubmit(data: EquipmentMaintenanceFormValues) {
-    console.log('[MaintenanceForm] values:', data)
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">
-          Maintenance record added successfully
-        </h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => setSubmitted(false)}
-            className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-          >
-            Add Another
-          </button>
-          <Link
-            to={`/equipment/${equipmentId}`}
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Equipment
-          </Link>
-        </div>
-      </div>
-    )
+  async function onSubmit(data: EquipmentMaintenanceFormValues) {
+    setServerError(null)
+    try {
+      await equipmentRepository.recordMaintenance(equipmentId, {
+        maintenanceDate: data.maintenanceDate,
+        maintenanceType: data.maintenanceType as MaintenanceType,
+        description: data.description,
+        cost: data.cost ? Number(data.cost) : undefined,
+        performedBy: data.performedBy || undefined,
+        nextMaintenanceDate: data.nextMaintenanceDate || undefined,
+        notes: data.notes || undefined,
+      })
+      navigate(successRedirectTo ?? `/equipment/${equipmentId}`)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      noValidate
-      aria-label="Record maintenance form"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label="Record maintenance form">
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         {/* Maintenance Details */}
         <SectionCard title="Maintenance Details">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -170,7 +175,7 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
                 error={!!errors.maintenanceType}
                 {...register('maintenanceType')}
               >
-                <option value="">Select type…</option>
+                <option value="">Select type</option>
                 {maintenanceTypeOptions.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -271,7 +276,7 @@ export function MaintenanceForm({ equipmentId, onCancel }: MaintenanceFormProps)
             disabled={isSubmitting}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save Record
+            {isSubmitting ? 'Saving…' : 'Save Record'}
           </button>
         </div>
       </div>

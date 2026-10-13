@@ -36,7 +36,8 @@ export interface Equipment {
   status: EquipmentStatus
   notes?: string
   createdAt: string
-  updatedAt: string
+  /** Backend has no updatedAt column. */
+  updatedAt?: string
 }
 
 export interface EquipmentMaintenance {
