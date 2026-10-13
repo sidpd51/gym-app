@@ -3,19 +3,9 @@ import { useForm } from 'react-hook-form'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { PermissionGate } from '@/features/auth/components/PermissionGate'
 import type { GymSettings, DateFormat } from '../types/settings.types'
 import { preferencesSchema, type PreferencesFormValues } from '../schemas/settings.schema'
-
-function inputCls(hasError: boolean) {
-  return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
-    hasError
-      ? 'border-red-300 bg-red-50 focus:ring-red-400'
-      : 'border-zinc-200 bg-white focus:ring-blue-500'
-  )
-}
 
 interface FieldProps {
   label: string

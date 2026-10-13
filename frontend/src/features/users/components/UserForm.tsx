@@ -2,18 +2,20 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { FormSelect } from '@/components/common/FormSelect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/lib/api'
 import { USER_ROLES, USER_STATUSES } from '../types/user.types'
-import { userSchema, type UserFormValues } from '../schemas/user.schema'
+import { createUserSchema, userSchema, type UserFormValues } from '../schemas/user.schema'
+import { userRepository } from '../api/users.repository'
 
 function inputCls(hasError: boolean) {
   return cn(
-    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2',
+    'w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
     hasError
       ? 'border-red-300 bg-red-50 focus:ring-red-400'
-      : 'border-zinc-200 bg-white focus:ring-blue-500'
+      : 'border-zinc-200 bg-white focus:ring-blue-500',
   )
 }
 
@@ -57,27 +59,30 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 interface UserFormProps {
   mode: 'create' | 'edit'
-  defaultValues?: Partial<UserFormValues>
+  /** Required in edit mode (PATCH /api/v1/users/{id}). */
+  userId?: string
+  defaultValues?: Partial<UserFormValues & { password?: string }>
   onCancel: () => void
   successRedirectTo?: string
-  successMessage?: string
 }
 
 export function UserForm({
   mode,
+  userId,
   defaultValues,
   onCancel,
   successRedirectTo = '/users',
-  successMessage = mode === 'create' ? 'User created successfully.' : 'User updated successfully.',
 }: UserFormProps) {
-  const [submitted, setSubmitted] = useState(false)
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+  } = useForm<UserFormValues & { password?: string }>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver((mode === 'create' ? createUserSchema : userSchema) as any),
     defaultValues: {
       firstName: '',
       lastName: '',
@@ -85,48 +90,66 @@ export function UserForm({
       phone: '',
       role: 'OWNER',
       status: 'ACTIVE',
+      ...(mode === 'create' ? { password: '' } : {}),
       ...defaultValues,
     },
   })
 
-  function onSubmit(data: UserFormValues) {
-    console.log(`[UserForm:${mode}]`, data)
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">
-          {mode === 'create' ? 'User created' : 'Changes saved'}
-        </h3>
-        <p className="mt-1 text-sm text-green-700">{successMessage}</p>
-        <p className="mt-1 text-xs text-green-600">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => setSubmitted(false)}
-            className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-          >
-            {mode === 'create' ? 'Add Another' : 'Edit Again'}
-          </button>
-          <Link
-            to={successRedirectTo}
-            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            Back to Users
-          </Link>
-        </div>
-      </div>
-    )
+  async function onSubmit(data: UserFormValues & { password?: string }) {
+    setServerError(null)
+    try {
+      if (mode === 'create') {
+        if (!data.password) {
+          setServerError('Password is required.')
+          return
+        }
+        await userRepository.create({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone || undefined,
+          role: data.role,
+          password: data.password,
+        })
+      } else {
+        if (!userId) {
+          setServerError('Missing user id.')
+          return
+        }
+        // Backend PATCH accepts firstName/lastName/phone/role/status (no email).
+        await userRepository.update(userId, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone || undefined,
+          role: data.role,
+          status: data.status,
+        })
+      }
+      navigate(successRedirectTo)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setServerError(err.message)
+      } else if (err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label="User form">
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
+
         {/* Identity */}
         <SectionCard title="Personal Information">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -168,9 +191,14 @@ export function UserForm({
                 type="email"
                 autoComplete="email"
                 placeholder="user@example.com"
+                disabled={mode === 'edit'}
+                title={mode === 'edit' ? 'Email cannot be changed' : undefined}
                 className={inputCls(!!errors.email)}
                 {...register('email')}
               />
+              {mode === 'edit' && (
+                <p className="mt-1 text-xs text-zinc-500">Email cannot be changed.</p>
+              )}
             </Field>
 
             <Field label="Phone" htmlFor="phone" error={errors.phone?.message}>
@@ -183,6 +211,24 @@ export function UserForm({
                 {...register('phone')}
               />
             </Field>
+
+            {mode === 'create' && (
+              <Field
+                label="Password"
+                required
+                htmlFor="password"
+                error={errors.password?.message}
+              >
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Min 8 characters"
+                  className={inputCls(!!errors.password)}
+                  {...register('password')}
+                />
+              </Field>
+            )}
           </div>
         </SectionCard>
 
@@ -199,16 +245,23 @@ export function UserForm({
               </FormSelect>
             </Field>
 
-            <Field label="Status" required htmlFor="status" error={errors.status?.message}>
-              <FormSelect id="status" error={!!errors.status} {...register('status')}>
-                {USER_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </FormSelect>
-            </Field>
+            {mode === 'edit' && (
+              <Field label="Status" required htmlFor="status" error={errors.status?.message}>
+                <FormSelect id="status" error={!!errors.status} {...register('status')}>
+                  {USER_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </FormSelect>
+              </Field>
+            )}
           </div>
+          {mode === 'create' && (
+            <p className="mt-3 text-xs text-zinc-500">
+              New users are created with ACTIVE status.
+            </p>
+          )}
         </SectionCard>
 
         {/* Actions */}
@@ -225,9 +278,19 @@ export function UserForm({
             disabled={isSubmitting}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mode === 'create' ? 'Create User' : 'Save Changes'}
+            {isSubmitting
+              ? mode === 'create'
+                ? 'Creating…'
+                : 'Saving…'
+              : mode === 'create'
+                ? 'Create User'
+                : 'Save Changes'}
           </button>
         </div>
+
+        <p className="text-xs text-zinc-400">
+          Back to <Link to="/users" className="underline hover:text-zinc-600">Users</Link>
+        </p>
       </div>
     </form>
   )

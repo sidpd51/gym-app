@@ -8,30 +8,30 @@ import { UserFilters } from '../components/UserFilters'
 import { UserTable } from '../components/UserTable'
 
 export function UsersPage() {
-  const { users } = useUsers()
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL')
 
+  const { users, meta, isLoading, error, refetch } = useUsers({
+    page: 1,
+    pageSize: 100,
+    role: roleFilter === 'ALL' ? undefined : roleFilter,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+  })
+
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase()
+    if (!q) return users
     return users.filter((u) => {
-      if (roleFilter !== 'ALL' && u.role !== roleFilter) return false
-      if (statusFilter !== 'ALL' && u.status !== statusFilter) return false
-      if (q) {
-        const fullName = `${u.firstName} ${u.lastName}`.toLowerCase()
-        if (
-          !fullName.includes(q) &&
-          !u.email.toLowerCase().includes(q) &&
-          !(u.phone ?? '').includes(q) &&
-          !u.userCode.toLowerCase().includes(q)
-        ) {
-          return false
-        }
-      }
-      return true
+      const fullName = `${u.firstName} ${u.lastName}`.toLowerCase()
+      return (
+        fullName.includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.phone ?? '').includes(q) ||
+        u.userCode.toLowerCase().includes(q)
+      )
     })
-  }, [users, search, roleFilter, statusFilter])
+  }, [users, search])
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -77,10 +77,32 @@ export function UsersPage() {
       <div className="rounded-lg border border-zinc-200 bg-white">
         <div className="border-b border-zinc-200 px-5 py-4">
           <h3 className="text-sm font-semibold text-zinc-900">
-            {filteredUsers.length} user{filteredUsers.length === 1 ? '' : 's'}
+            {isLoading
+              ? 'Loading users…'
+              : `${meta?.total ?? filteredUsers.length} user${(meta?.total ?? filteredUsers.length) === 1 ? '' : 's'}`}
           </h3>
         </div>
-        <UserTable users={filteredUsers} />
+        {isLoading ? (
+          <div className="space-y-3 px-5 py-6" aria-label="Loading users">
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="h-10 animate-pulse rounded-lg bg-zinc-100" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="px-5 py-12 text-center">
+            <p className="text-sm font-medium text-zinc-700">Failed to load users</p>
+            <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <UserTable users={filteredUsers} />
+        )}
       </div>
     </div>
   )

@@ -24,6 +24,17 @@ export const userSchema = z.object({
 
 export type UserFormValues = z.infer<typeof userSchema>
 
+// Create mode additionally requires a password (backend hashes it with bcrypt,
+// min 8 chars per CreateUserRequest validation).
+export const createUserSchema = userSchema.extend({
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(72, 'Password must be at most 72 characters'),
+})
+
+export type CreateUserFormValues = z.infer<typeof createUserSchema>
+
 export const profileSchema = z.object({
   firstName: z
     .string()

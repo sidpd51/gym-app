@@ -73,7 +73,6 @@ export function useApiList<T>(
   const depsKey = JSON.stringify(query)
   const { data, isLoading, error, refetch } = useApiQuery(
     () => fetcher(query),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     depsKey,
   )
   return {
