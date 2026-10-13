@@ -30,8 +30,8 @@ export function LoginPage() {
     return <Navigate to="/dashboard" replace />
   }
 
-  function onSubmit(data: LoginFormValues) {
-    const ok = login(data.email, data.password)
+  async function onSubmit(data: LoginFormValues) {
+    const ok = await login(data.email, data.password)
     if (ok) {
       navigate(from, { replace: true })
     } else {

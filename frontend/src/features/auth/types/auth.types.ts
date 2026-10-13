@@ -10,7 +10,8 @@ export interface ProfileUpdateData {
 
 export interface AuthContextValue {
   user: AuthUser | null
-  login: (email: string, password: string) => boolean
-  logout: () => void
+  isLoading: boolean
+  login: (email: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
   updateProfile: (data: ProfileUpdateData) => void
 }

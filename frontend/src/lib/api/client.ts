@@ -35,6 +35,7 @@ async function request<T>(
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
+      credentials: 'include',
       body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
     })
   } catch (err) {

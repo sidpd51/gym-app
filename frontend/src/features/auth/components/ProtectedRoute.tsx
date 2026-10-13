@@ -10,9 +10,17 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteProps) {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const { hasPermission } = usePermissions()
   const location = useLocation()
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-zinc-500">
+        Loading session...
+      </div>
+    )
+  }
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />
