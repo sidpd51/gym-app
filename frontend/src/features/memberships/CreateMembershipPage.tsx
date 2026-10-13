@@ -7,7 +7,33 @@ export function CreateMembershipPage() {
   const { memberId } = useParams<{ memberId: string }>()
   const navigate = useNavigate()
 
-  const { member, supplementalData } = useMember(memberId)
+  const { member, supplementalData, isLoading, error, refetch } = useMember(memberId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading member">
+        <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="h-96 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h2 className="text-base font-semibold text-zinc-700">Failed to load member</h2>
+        <p className="mt-1 text-sm text-zinc-500">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-6 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (!member) {
     return (
@@ -29,7 +55,11 @@ export function CreateMembershipPage() {
     )
   }
 
-  const hasActiveMembership = supplementalData?.membershipHistory[0]?.status === 'ACTIVE'
+  // Active membership check uses the member's membership history from
+  // GET /members/{id}/details. Backend currently returns empty slices,
+  // so this falls back to a server-side check once data populates.
+  const history = supplementalData?.membershipHistory ?? []
+  const hasActiveMembership = history.some((ms) => ms.status === 'ACTIVE')
 
   if (hasActiveMembership) {
     return (

@@ -3,9 +3,11 @@ import { FormSelect } from '@/components/common/FormSelect'
 import { DatePicker } from '@/components/common/DatePicker'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
+import { ApiError } from '@/lib/api'
 import { useMembershipPlans } from '../../membership-plans/hooks/useMembershipPlans'
+import { membershipRepository } from '../api/memberships.repository'
 import { createMembershipSchema, type CreateMembershipFormValues } from '../schemas/membership.schema'
 import { MembershipSummary } from './MembershipSummary'
 
@@ -71,8 +73,9 @@ interface MembershipFormProps {
 }
 
 export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
-  const [submitted, setSubmitted] = useState(false)
-  const { plans } = useMembershipPlans()
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
+  const { plans, isLoading: plansLoading } = useMembershipPlans()
   const activePlans = plans.filter((p) => p.status === 'ACTIVE')
 
   const {
@@ -91,25 +94,29 @@ export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
   const selectedPlan = activePlans.find((p) => p.id === planId) ?? null
   const endDate = selectedPlan && startDate.length === 10 ? addDays(startDate, selectedPlan.durationInDays) : null
 
-  function onSubmit(data: CreateMembershipFormValues) {
-    console.log('[CreateMembership] values:', data)
-    setSubmitted(true)
+  async function onSubmit(data: CreateMembershipFormValues) {
+    setServerError(null)
+    try {
+      await membershipRepository.create({
+        memberId,
+        planId: data.planId,
+        startDate: data.startDate,
+      })
+      navigate(`/members/${memberId}`)
+    } catch (err) {
+      if (err instanceof ApiError || err instanceof Error) {
+        setServerError(err.message)
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
+    }
   }
 
-  if (submitted) {
+  if (plansLoading) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-6 py-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" aria-hidden="true" />
-        <h3 className="mt-3 text-base font-semibold text-green-800">Membership created successfully</h3>
-        <p className="mt-1 text-sm text-green-700">
-          Backend integration will be added in a later phase. Changes have not been persisted.
-        </p>
-        <Link
-          to={`/members/${memberId}`}
-          className="mt-5 inline-block rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-        >
-          Back to Member
-        </Link>
+      <div className="space-y-5" aria-label="Loading plans">
+        <div className="h-8 w-64 animate-pulse rounded bg-zinc-100" />
+        <div className="h-96 animate-pulse rounded-lg bg-zinc-100" />
       </div>
     )
   }
@@ -121,6 +128,15 @@ export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
       aria-label="Create membership form"
     >
       <div className="space-y-5">
+        {serverError && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            role="alert"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {serverError}
+          </div>
+        )}
         <div className="rounded-lg border border-zinc-200 bg-white px-6 py-5">
           <h2 className="text-sm font-semibold text-zinc-900">Plan & Date</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -195,10 +211,10 @@ export function MembershipForm({ memberId, onCancel }: MembershipFormProps) {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || plansLoading}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Create Membership
+            {isSubmitting ? 'Creating…' : 'Create Membership'}
           </button>
         </div>
       </div>

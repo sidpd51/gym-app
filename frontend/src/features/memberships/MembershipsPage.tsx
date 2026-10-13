@@ -15,13 +15,17 @@ export function MembershipsPage() {
   const [planFilter, setPlanFilter] = useState('ALL')
   const [page, setPage] = useState(1)
 
-  const { members } = useMembers()
-  const { plans } = useMembershipPlans()
-  const { memberships } = useMemberships()
+  const { members, isLoading: membersLoading } = useMembers()
+  const { plans, isLoading: plansLoading } = useMembershipPlans()
+  const { memberships, meta, isLoading, error, refetch } = useMemberships({
+    page,
+    pageSize: PAGE_SIZE,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+  })
 
   const membersById = useMemo(
     () => Object.fromEntries(members.map((m) => [m.id, m])),
-    [members]
+    [members],
   )
 
   const planOptions = useMemo(() => {
@@ -35,7 +39,6 @@ export function MembershipsPage() {
     const q = search.trim().toLowerCase()
 
     return memberships.filter((m) => {
-      if (statusFilter !== 'ALL' && m.status !== statusFilter) return false
       if (planFilter !== 'ALL' && m.planId !== planFilter) return false
       if (q) {
         const member = membersById[m.memberId] as (typeof membersById)[string] | undefined
@@ -50,10 +53,9 @@ export function MembershipsPage() {
       }
       return true
     })
-  }, [search, statusFilter, planFilter, membersById, memberships])
+  }, [search, planFilter, membersById, memberships])
 
-  const totalPages = Math.max(1, Math.ceil(filteredMemberships.length / PAGE_SIZE))
-  const pagedMemberships = filteredMemberships.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = meta?.totalPages ?? 1
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -68,6 +70,41 @@ export function MembershipsPage() {
   function handlePlanChange(value: string) {
     setPlanFilter(value)
     setPage(1)
+  }
+
+  if (isLoading || membersLoading || plansLoading) {
+    return (
+      <div className="space-y-5" aria-label="Loading memberships">
+        <div className="h-6 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="h-12 animate-pulse rounded-lg bg-zinc-100" />
+        <div className="space-y-3 px-5 py-6">
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="h-10 animate-pulse rounded-lg bg-zinc-100" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900">Memberships</h2>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white px-5 py-12 text-center">
+          <p className="text-sm font-medium text-zinc-700">Failed to load memberships</p>
+          <p className="mt-1 text-xs text-zinc-500">{error.message}</p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-4 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (memberships.length === 0) {
@@ -92,7 +129,7 @@ export function MembershipsPage() {
       <div>
         <h2 className="text-xl font-semibold text-zinc-900">Memberships</h2>
         <p className="mt-0.5 text-sm text-zinc-500">
-          {memberships.length} total memberships
+          {meta?.total ?? memberships.length} total memberships
         </p>
       </div>
 
@@ -111,12 +148,12 @@ export function MembershipsPage() {
           <h3 className="text-sm font-semibold text-zinc-900">Membership List</h3>
         </div>
 
-        <MembershipTable memberships={pagedMemberships} membersById={membersById} />
+        <MembershipTable memberships={filteredMemberships} membersById={membersById} />
 
         <MembershipPagination
           page={page}
           totalPages={totalPages}
-          totalCount={filteredMemberships.length}
+          totalCount={meta?.total ?? filteredMemberships.length}
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
         />

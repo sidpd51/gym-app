@@ -1,14 +1,63 @@
-import { membershipRepository } from '../api/memberships.repository'
+import { useApiDetail, useApiList, useApiQuery } from '@/lib/api/useApi'
+import type { ApiError, PaginatedResponse } from '@/lib/api'
+import { membershipRepository, type MembershipListQuery } from '../api/memberships.repository'
 import type { Membership } from '../types/membership.types'
 
-export function useMemberships(): { memberships: Membership[] } {
-  return { memberships: membershipRepository.list() }
+interface MembershipsResult {
+  memberships: Membership[]
+  meta: PaginatedResponse<Membership>['meta'] | null
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
 }
 
-export function useMembership(id: string | undefined): { membership: Membership | undefined } {
-  return { membership: id ? membershipRepository.getById(id) : undefined }
+/**
+ * Async membership list backed by GET /api/v1/memberships.
+ * `memberships` defaults to [] while loading so existing cross-feature
+ * consumers (reports, search, reminders) keep working during fetch.
+ */
+export function useMemberships(query?: MembershipListQuery): MembershipsResult {
+  const normalized: MembershipListQuery = {
+    page: 1,
+    pageSize: 100,
+    ...query,
+  }
+  const { data, meta, isLoading, error, refetch } = useApiList<Membership>(normalized, (q) =>
+    membershipRepository.list(q as MembershipListQuery),
+  )
+  return { memberships: data ?? [], meta, isLoading, error, refetch }
 }
 
-export function useMemberMemberships(memberId: string | undefined): { memberships: Membership[] } {
-  return { memberships: memberId ? membershipRepository.listByMemberId(memberId) : [] }
+interface MembershipResult {
+  membership: Membership | null
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
+}
+
+/** Async membership detail backed by GET /api/v1/memberships/{id}. */
+export function useMembership(id: string | undefined): MembershipResult {
+  const { data, isLoading, error, refetch } = useApiDetail<Membership>(id, (membershipId) =>
+    membershipRepository.getById(membershipId),
+  )
+  return { membership: data, isLoading, error, refetch }
+}
+
+interface MemberMembershipsResult {
+  memberships: Membership[]
+  isLoading: boolean
+  error: ApiError | null
+  refetch: () => void
+}
+
+/**
+ * Async member-scoped membership list backed by
+ * GET /api/v1/memberships?memberId=... (paginated, pageSize 100).
+ */
+export function useMemberMemberships(memberId: string | undefined): MemberMembershipsResult {
+  const { data, isLoading, error, refetch } = useApiQuery<Membership[]>(
+    () => membershipRepository.listByMemberId(memberId!),
+    memberId ?? '',
+  )
+  return { memberships: data ?? [], isLoading, error, refetch }
 }
