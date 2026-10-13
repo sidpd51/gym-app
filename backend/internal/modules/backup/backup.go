@@ -44,6 +44,12 @@ type BackupFile struct {
 // Create runs pg_dump and writes gymdb_YYYYMMDD_HHMMSS.sql into BackupDir.
 // Idempotent for the daily scheduler job: a same-day file name causes a
 // no-op (the caller sees the existing file name).
+//
+// Docker mode: when BACKUP_USE_DOCKER_EXEC=1, pg_dump runs inside the
+// BACKUP_DOCKER_CONTAINER container (default "gym-postgres") via
+// `docker exec`, streaming stdout to the backup file. This covers dev
+// machines (e.g. Windows hosts) with no local pg_dump installed, and
+// guarantees the pg_dump major version matches the server.
 func (s *Service) Create(ctx context.Context, idempotentDaily bool) (BackupFile, error) {
 	if err := os.MkdirAll(s.BackupDir, 0o750); err != nil {
 		return BackupFile{}, fmt.Errorf("mkdir backup dir: %w", err)
@@ -71,6 +77,10 @@ func (s *Service) Create(ctx context.Context, idempotentDaily bool) (BackupFile,
 	connStr, err := pgConnString(s.DatabaseURL)
 	if err != nil {
 		return BackupFile{}, err
+	}
+
+	if os.Getenv("BACKUP_USE_DOCKER_EXEC") == "1" {
+		return s.createViaDocker(ctx, path, name)
 	}
 
 	// Resolve pg_dump path. Not in PATH on some Windows installs; prefer
@@ -117,9 +127,14 @@ func (s *Service) List(_ context.Context) ([]BackupFile, error) {
 }
 
 // Restore runs `psql -f <uploaded.sql>` against the configured database.
+// In docker mode (BACKUP_USE_DOCKER_EXEC=1) psql runs inside the DB
+// container with the dump streamed over stdin.
 // On success, callers typically trigger process shutdown (via systemd/NSSM
 // restart) to drop any stale connections. The caller handles that signal.
 func (s *Service) Restore(ctx context.Context, sqlReader io.Reader) error {
+	if os.Getenv("BACKUP_USE_DOCKER_EXEC") == "1" {
+		return s.restoreViaDocker(ctx, sqlReader)
+	}
 	connStr, err := pgConnString(s.DatabaseURL)
 	if err != nil {
 		return err
@@ -167,6 +182,89 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// dbParts extracts user/dbname from DATABASE_URL for docker-exec mode.
+// The host part is irrelevant: inside the container we always connect via
+// -h localhost.
+func dbParts(databaseURL string) (user, dbname string, err error) {
+	u, err := url.Parse(databaseURL)
+	if err != nil {
+		return "", "", fmt.Errorf("parse DATABASE_URL: %w", err)
+	}
+	dbname = strings.TrimPrefix(u.Path, "/")
+	if u.User == nil || u.User.Username() == "" || dbname == "" {
+		return "", "", fmt.Errorf("DATABASE_URL must include user and dbname")
+	}
+	return u.User.Username(), dbname, nil
+}
+
+func dbPassword(databaseURL string) string {
+	u, err := url.Parse(databaseURL)
+	if err != nil || u.User == nil {
+		return ""
+	}
+	pw, _ := u.User.Password()
+	return pw
+}
+
+func dockerContainer() string {
+	return envOr("BACKUP_DOCKER_CONTAINER", "gym-postgres")
+}
+
+// createViaDocker streams `pg_dump` stdout from inside the DB container
+// into path. No local pg_dump binary required.
+func (s *Service) createViaDocker(ctx context.Context, path, name string) (BackupFile, error) {
+	user, dbname, err := dbParts(s.DatabaseURL)
+	if err != nil {
+		return BackupFile{}, err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return BackupFile{}, fmt.Errorf("create backup file: %w", err)
+	}
+	var stderr strings.Builder
+	cmd := exec.CommandContext(ctx, "docker", "exec", "-i",
+		"-e", "PGPASSWORD="+dbPassword(s.DatabaseURL),
+		dockerContainer(), "pg_dump",
+		"-h", "localhost", "-U", user, "-d", dbname,
+		"--no-owner", "--no-privileges", "--format=plain",
+	)
+	cmd.Stdout = f
+	cmd.Stderr = &stderr
+	runErr := cmd.Run()
+	_ = f.Close()
+	if runErr != nil {
+		_ = os.Remove(path)
+		return BackupFile{}, fmt.Errorf("docker pg_dump failed: %v: %s", runErr, stderr.String())
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return BackupFile{}, err
+	}
+	return BackupFile{Name: name, SizeBytes: info.Size(), CreatedAt: info.ModTime()}, nil
+}
+
+// restoreViaDocker streams a SQL dump over stdin to `psql` inside the DB
+// container. No local psql binary required.
+func (s *Service) restoreViaDocker(ctx context.Context, sqlReader io.Reader) error {
+	user, dbname, err := dbParts(s.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	var stderr strings.Builder
+	cmd := exec.CommandContext(ctx, "docker", "exec", "-i",
+		"-e", "PGPASSWORD="+dbPassword(s.DatabaseURL),
+		dockerContainer(), "psql",
+		"-h", "localhost", "-U", user, "-d", dbname,
+		"--set", "ON_ERROR_STOP=on",
+	)
+	cmd.Stdin = sqlReader
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("docker psql restore failed: %v: %s", err, stderr.String())
+	}
+	return nil
 }
 
 // --- Handler ---

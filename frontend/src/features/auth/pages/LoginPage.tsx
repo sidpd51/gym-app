@@ -164,7 +164,7 @@ export function LoginPage() {
               {showForgotInfo && (
                 <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs text-blue-700">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  Password recovery will be available after backend authentication is connected.
+                  Contact your gym administrator to reset your password.
                 </div>
               )}
 
@@ -178,16 +178,6 @@ export function LoginPage() {
               </button>
             </div>
           </form>
-        </div>
-
-        {/* Dev credential hint */}
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="mb-1 text-xs font-semibold text-amber-700">Dev credentials (mock only)</p>
-          <div className="space-y-0.5 text-xs text-amber-600">
-            <p>arjun.mehta@fitzone.example / owner123</p>
-            <p>sneha.desai@fitzone.example / admin123</p>
-            <p>ravi.nair@fitzone.example / recept123</p>
-          </div>
         </div>
       </div>
     </div>
