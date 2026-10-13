@@ -45,7 +45,8 @@ internal/
       service.go  Business logic + transactions
       handler.go  HTTP wiring, Mount(r chi.Router)
 docs/            Design docs (requirements → deployment)
-docker-compose.yml  Local PostgreSQL
+Dockerfile      Backend image (goose migrations run at container boot)
+entrypoint.sh   Migrate-then-serve container entrypoint
 Makefile         dev / build / migrate / sqlc targets
 ```
 
@@ -54,10 +55,11 @@ Each module is self-contained and mounted from `internal/app/app.go`.
 ## Prerequisites
 
 - Go 1.26+
-- Docker (for the dev PostgreSQL via `docker compose`)
+- Docker (full stack via the repo-root `docker compose.yml`)
 - `goose` — `go install github.com/pressly/goose/v3/cmd/goose@latest`
 - `sqlc` — `go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest`
-- PostgreSQL 15 client tools (`pg_dump`, `psql`) if you need the backup/restore endpoints
+- PostgreSQL 15 client tools (`pg_dump`, `psql`) only for Windows-host
+  backup/restore — otherwise set `BACKUP_USE_DOCKER_EXEC=1` in `.env`
 
 ## Quickstart
 
