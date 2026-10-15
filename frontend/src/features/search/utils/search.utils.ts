@@ -78,13 +78,15 @@ export async function fetchSearchResults(
   return { members, trainers, leads }
 }
 
+const EMPTY_SEARCH_GROUPS: Partial<Record<SearchResultType, SearchGroup>> = Object.freeze({})
+
 // Search the live backend and return grouped results respecting permissions.
 export async function searchLive(
   query: string,
   permissions: SearchPermissions,
 ): Promise<Partial<Record<SearchResultType, SearchGroup>>> {
   const q = query.trim().toLowerCase()
-  if (!q) return {}
+  if (!q) return EMPTY_SEARCH_GROUPS
 
   const { members, trainers, leads } = await fetchSearchResults(q)
 

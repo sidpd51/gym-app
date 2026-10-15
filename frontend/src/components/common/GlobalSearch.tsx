@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePermissions } from '@/features/auth/hooks/usePermissions'
@@ -8,17 +8,20 @@ import type { GlobalSearchResult, SearchPermissions, SearchResultType, SearchGro
 
 function useSearchPermissions(): SearchPermissions {
   const { hasPermission } = usePermissions()
-  return {
-    members: hasPermission('members:view'),
-    membershipPlans: hasPermission('membership-plans:view'),
-    memberships: hasPermission('memberships:view'),
-    payments: hasPermission('payments:view'),
-    trainers: hasPermission('trainers:view'),
-    leads: hasPermission('leads:view'),
-    expenses: hasPermission('expenses:view'),
-    inventory: hasPermission('inventory:view'),
-    equipment: hasPermission('equipment:view'),
-  }
+  return useMemo(
+    () => ({
+      members: hasPermission('members:view'),
+      membershipPlans: hasPermission('membership-plans:view'),
+      memberships: hasPermission('memberships:view'),
+      payments: hasPermission('payments:view'),
+      trainers: hasPermission('trainers:view'),
+      leads: hasPermission('leads:view'),
+      expenses: hasPermission('expenses:view'),
+      inventory: hasPermission('inventory:view'),
+      equipment: hasPermission('equipment:view'),
+    }),
+    [hasPermission],
+  )
 }
 
 export function GlobalSearch() {
@@ -31,15 +34,60 @@ export function GlobalSearch() {
   const [groups, setGroups] = useState<Partial<Record<SearchResultType, SearchGroup>>>({})
   const [totalResults, setTotalResults] = useState(0)
 
-  // Fetch search results when debounced query changes
+  // Listen for global shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
-    ;(async () => {
-      const result = await searchAll(debouncedQuery, permissions)
-      setGroups(result)
-      const entries = Object.entries(result)
-      setTotalResults(entries.reduce((sum, [, g]) => sum + (g?.results.length ?? 0), 0))
-    })()
-  }, [debouncedQuery, permissions])
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setOpen((prev) => !prev)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Focus input on open, clear state on close
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 50)
+      return () => clearTimeout(timer)
+    } else {
+      setQuery('')
+      setGroups({})
+      setTotalResults(0)
+    }
+  }, [open])
+
+  // Fetch search results ONLY when dialog is open and query is non-empty
+  useEffect(() => {
+    if (!open) return
+
+    const trimmed = debouncedQuery.trim()
+    if (!trimmed) {
+      setGroups({})
+      setTotalResults(0)
+      return
+    }
+
+    let active = true
+
+    searchAll(trimmed, permissions)
+      .then((result) => {
+        if (!active) return
+        setGroups(result)
+        const entries = Object.entries(result)
+        setTotalResults(entries.reduce((sum, [, g]) => sum + (g?.results.length ?? 0), 0))
+      })
+      .catch(() => {
+        if (!active) return
+        setGroups({})
+        setTotalResults(0)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [open, debouncedQuery, permissions])
 
   function handleSelect(result: GlobalSearchResult) {
     setOpen(false)

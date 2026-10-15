@@ -19,7 +19,7 @@ interface MemberTrainerResult {
  */
 export function useMemberTrainer(memberId: string | undefined): MemberTrainerResult {
   const { data, isLoading, error, refetch } = useApiQuery<MemberTrainerAssignment | null>(
-    (signal) => memberTrainerRepository.getCurrentForMember(memberId!, signal),
+    (signal) => (memberId ? memberTrainerRepository.getCurrentForMember(memberId, signal) : Promise.resolve(null)),
     memberId ?? '',
   )
   return {

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AuthContextValue, AuthUser, ProfileUpdateData } from '../types/auth.types'
 import type { User } from '@/features/users/types/user.types'
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  async function login(email: string, password: string): Promise<boolean> {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       const payload = await apiClient.post<BackendUser>('/api/v1/auth/login', {
         email,
@@ -72,31 +72,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       return false
     }
-  }
+  }, [])
 
-  async function logout(): Promise<void> {
+  const logout = useCallback(async (): Promise<void> => {
     try {
       await apiClient.post('/api/v1/auth/logout')
     } catch {
       // Ignore transport errors; local session is still cleared.
     }
     setUser(null)
-  }
+  }, [])
 
-  function updateProfile(data: ProfileUpdateData) {
+  const updateProfile = useCallback((data: ProfileUpdateData) => {
     // Keep the existing optimistic local behaviour. Backend profile updates can
     // be wired separately when the wider app integration is complete.
-    if (!user) return
-    setUser({
-      ...user,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone ?? user.phone,
+    setUser((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone ?? prev.phone,
+      }
     })
-  }
+  }, [])
+
+  const contextValue = useMemo(
+    () => ({ user, isLoading, login, logout, updateProfile }),
+    [user, isLoading, login, logout, updateProfile],
+  )
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, updateProfile }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )

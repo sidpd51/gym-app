@@ -53,7 +53,7 @@ interface MemberPaymentsResult {
 /** Async member-scoped payment list backed by GET /api/v1/payments?memberId=. */
 export function useMemberPayments(memberId: string | undefined): MemberPaymentsResult {
   const { data, isLoading, error, refetch } = useApiQuery<Payment[]>(
-    (signal) => paymentRepository.listByMemberId(memberId!, signal),
+    (signal) => (memberId ? paymentRepository.listByMemberId(memberId, signal) : Promise.resolve([])),
     memberId ?? '',
   )
   return { payments: data ?? [], isLoading, error, refetch }

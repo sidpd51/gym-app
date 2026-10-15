@@ -1,22 +1,37 @@
+import { useCallback, useMemo } from 'react'
 import { useAuth } from '../context/useAuth'
 import { rolePermissions } from '../permissions/permissions'
 import type { Permission } from '../permissions/permissions'
 
 export function usePermissions() {
   const { user } = useAuth()
+  const role = user?.role
 
-  function hasPermission(permission: Permission): boolean {
-    if (!user) return false
-    return rolePermissions[user.role]?.includes(permission) ?? false
-  }
+  const hasPermission = useCallback(
+    (permission: Permission): boolean => {
+      if (!role) return false
+      return rolePermissions[role]?.includes(permission) ?? false
+    },
+    [role],
+  )
 
-  function hasAnyPermission(permissions: Permission[]): boolean {
-    return permissions.some(hasPermission)
-  }
+  const hasAnyPermission = useCallback(
+    (permissions: Permission[]): boolean => {
+      return permissions.some(hasPermission)
+    },
+    [hasPermission],
+  )
 
-  function hasAllPermissions(permissions: Permission[]): boolean {
-    return permissions.every(hasPermission)
-  }
+  const hasAllPermissions = useCallback(
+    (permissions: Permission[]): boolean => {
+      return permissions.every(hasPermission)
+    },
+    [hasPermission],
+  )
 
-  return { hasPermission, hasAnyPermission, hasAllPermissions }
+  return useMemo(
+    () => ({ hasPermission, hasAnyPermission, hasAllPermissions }),
+    [hasPermission, hasAnyPermission, hasAllPermissions],
+  )
 }
+

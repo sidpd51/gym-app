@@ -56,7 +56,7 @@ interface MemberMembershipsResult {
  */
 export function useMemberMemberships(memberId: string | undefined): MemberMembershipsResult {
   const { data, isLoading, error, refetch } = useApiQuery<Membership[]>(
-    (signal) => membershipRepository.listByMemberId(memberId!, signal),
+    (signal) => (memberId ? membershipRepository.listByMemberId(memberId, signal) : Promise.resolve([])),
     memberId ?? '',
   )
   return { memberships: data ?? [], isLoading, error, refetch }
