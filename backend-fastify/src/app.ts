@@ -8,11 +8,10 @@ import type { DbPool } from './db/pool.js';
 import { Signer, registerAuth } from './plugins/auth.js';
 import { registerCsrf } from './plugins/csrf.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
-import { authProtectedRoutes, authPublicRoutes } from './modules/auth/routes.js';
+import { createAuthModule } from './modules/auth/index.js';
 import type { ModuleContext } from './modules/context.js';
 import { featureModules } from './modules/index.js';
-import { userRoutes } from './modules/user/routes.js';
-import { UserService } from './modules/user/service.js';
+import { createUserModule } from './modules/user/index.js';
 
 const startTime = Date.now();
 
@@ -80,21 +79,24 @@ export async function buildApp(config: Config, pool: DbPool): Promise<FastifyIns
     return { status: { server: 'ok', db }, uptime: (Date.now() - startTime) / 1000 };
   });
 
-  const userSvc = new UserService(pool);
+  const user = createUserModule(pool);
+  const auth = createAuthModule({
+    pool, users: user.service, signer, cookieSecure, loginRateLimitMax: config.loginRateLimitMax,
+  });
   const ctx: ModuleContext = { pool, config, log: app.log };
 
   await app.register(
     async (api) => {
       // Login/logout live outside CSRF: no session on login, logout only clears a cookie.
-      await api.register(authPublicRoutes(userSvc, cookieSecure, config.loginRateLimitMax));
+      await api.register(auth.publicRoutes);
 
       await api.register(async (guarded) => {
         guarded.addHook('onRequest', guarded.csrfProtect);
-        await guarded.register(authProtectedRoutes(userSvc));
+        await guarded.register(auth.protectedRoutes);
 
         await guarded.register(async (authed) => {
           authed.addHook('onRequest', authed.authenticate);
-          await authed.register(userRoutes(userSvc));
+          await authed.register(user.routes);
           for (const mod of featureModules) await authed.register(mod(ctx));
         });
       });

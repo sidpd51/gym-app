@@ -1,8 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ModuleContext } from '../context.js';
-import { attendanceRoutes } from './routes.js';
-import { AttendanceService } from './service.js';
+import { AttendanceController } from './attendance.controller.js';
+import { AttendanceRepository } from './attendance.repository.js';
+import { attendanceRoutes } from './attendance.routes.js';
+import { AttendanceService } from './attendance.service.js';
 
+/** Composition root: repository -> service -> controller -> routes. */
 export function attendanceModule(ctx: ModuleContext): FastifyPluginAsync {
-  return attendanceRoutes(new AttendanceService(ctx.pool));
+  const repo = new AttendanceRepository(ctx.pool);
+  const service = new AttendanceService(ctx.pool, repo);
+  return attendanceRoutes(new AttendanceController(service));
 }

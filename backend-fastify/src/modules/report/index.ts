@@ -1,17 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ModuleContext } from '../context.js';
-import { parseRange, ReportService } from './service.js';
-
-const REPORTS = ['overview', 'revenue', 'members', 'memberships', 'attendance', 'expenses', 'leads'];
+import { ReportController } from './report.controller.js';
+import { ReportRepository } from './report.repository.js';
+import { reportRoutes } from './report.routes.js';
+import { ReportService } from './report.service.js';
 
 export function reportModule(ctx: ModuleContext): FastifyPluginAsync {
-  const svc = new ReportService(ctx.pool);
-  return async (app) => {
-    // For v1 every report returns the overview payload (same as the Go service).
-    for (const name of REPORTS) {
-      app.get(`/reports/${name}`, { onRequest: [app.requirePermission('reports:view')] }, async (req) =>
-        svc.overview(parseRange(req.query)),
-      );
-    }
-  };
+  const repo = new ReportRepository(ctx.pool);
+  return reportRoutes(new ReportController(new ReportService(repo)));
 }
