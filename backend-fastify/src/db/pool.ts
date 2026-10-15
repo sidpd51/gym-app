@@ -66,5 +66,6 @@ export async function exec(db: Db, sql: string, params: unknown[] = []): Promise
 const pgCode = (err: unknown): string => ((err as { code?: string } | null)?.code ?? '');
 export const pgConstraint = (err: unknown): string => (err as { constraint?: string } | null)?.constraint ?? '';
 export const isUniqueViolation = (err: unknown) => pgCode(err) === '23505';
-export const isForeignKeyViolation = (err: unknown) => pgCode(err) === '23503';
+// 23503 foreign_key_violation; 23001 restrict_violation (raised by ON DELETE RESTRICT, which the schema uses).
+export const isForeignKeyViolation = (err: unknown) => ['23503', '23001'].includes(pgCode(err));
 export const isCheckViolation = (err: unknown) => pgCode(err) === '23514';

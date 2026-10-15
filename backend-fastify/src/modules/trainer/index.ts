@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ModuleContext } from '../context.js';
+import { trainerRoutes } from './routes.js';
+import { TrainerService } from './service.js';
 
-// STUB — to be replaced by the real port.
-export function trainerModule(_ctx: ModuleContext): FastifyPluginAsync {
-  return async () => {};
+export function trainerModule(ctx: ModuleContext): FastifyPluginAsync {
+  return trainerRoutes(new TrainerService(ctx.pool));
 }

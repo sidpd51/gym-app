@@ -11,7 +11,7 @@ export function testConfig(databaseUrl: string): Config {
     jwtSecret: 'test-jwt-secret-test-jwt-secret-test-jwt-secret',
     cookieSecret: 'test-cookie-secret-test-cookie-secret-0123',
     frontendOrigin: 'http://localhost:5173', sessionTtlMs: 8 * 3600_000,
-    backupDir: '/tmp/gym-test-backups', logLevel: 'silent', loginRateLimitMax: 1000,
+    backupDir: '/tmp/gym-test-backups', logLevel: process.env.TEST_LOG ?? 'silent', loginRateLimitMax: 1000,
     backupUseDockerExec: false, backupDockerContainer: 'gym-postgres',
   };
 }

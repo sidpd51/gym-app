@@ -1,14 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ModuleContext } from '../context.js';
+import { notificationRoutes } from './routes.js';
+import { NotificationService } from './service.js';
 
-// STUB — to be replaced by the real port.
-export function notificationModule(_ctx: ModuleContext): FastifyPluginAsync {
-  return async () => {};
+export { registerNotificationJobs } from './jobs.js';
+
+export function notificationModule(ctx: ModuleContext): FastifyPluginAsync {
+  return notificationRoutes(new NotificationService(ctx.pool));
 }
-
-import type { Scheduler } from '../../common/scheduler.js';
-export function registerNotificationJobs(
-  _sched: Scheduler,
-  _ctx: ModuleContext,
-  _dailyBackup: (() => Promise<void>) | null,
-): void {}

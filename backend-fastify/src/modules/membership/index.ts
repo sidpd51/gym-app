@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ModuleContext } from '../context.js';
+import { membershipRoutes } from './routes.js';
+import { MembershipService } from './service.js';
 
-// STUB — to be replaced by the real port.
-export function membershipModule(_ctx: ModuleContext): FastifyPluginAsync {
-  return async () => {};
+export function membershipModule(ctx: ModuleContext): FastifyPluginAsync {
+  return membershipRoutes(new MembershipService(ctx.pool));
 }

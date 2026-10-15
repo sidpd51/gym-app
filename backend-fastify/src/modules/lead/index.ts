@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ModuleContext } from '../context.js';
+import { leadRoutes } from './routes.js';
+import { LeadService } from './service.js';
 
-// STUB — to be replaced by the real port.
-export function leadModule(_ctx: ModuleContext): FastifyPluginAsync {
-  return async () => {};
+export function leadModule(ctx: ModuleContext): FastifyPluginAsync {
+  return leadRoutes(new LeadService(ctx.pool));
 }

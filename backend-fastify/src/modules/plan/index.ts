@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ModuleContext } from '../context.js';
+import { planRoutes } from './routes.js';
+import { PlanService } from './service.js';
 
-// STUB — to be replaced by the real port.
-export function planModule(_ctx: ModuleContext): FastifyPluginAsync {
-  return async () => {};
+export function planModule(ctx: ModuleContext): FastifyPluginAsync {
+  return planRoutes(new PlanService(ctx.pool));
 }
