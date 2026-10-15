@@ -39,6 +39,6 @@ export function registerNotificationJobs(
       return;
     }
     await dailyBackup();
-    ctx.log.info('daily_backup: pg_dump complete');
+    ctx.log.info('daily_backup: dump complete');
   });
 }

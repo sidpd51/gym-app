@@ -31,8 +31,8 @@ describe('leads', () => {
     expect((await client.get('/leads?status=LOST')).body.data).toEqual([]);
     expect((await client.get('/leads/00000000-0000-0000-0000-000000000000')).body.code).toBe('LEAD_NOT_FOUND');
     expect((await client.delete(`/leads/${id}`)).status).toBe(204);
-    const audit = await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='LEAD' ORDER BY timestamp");
-    expect(audit.rows.map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DELETE']);
+    const [audit] = (await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='LEAD' ORDER BY timestamp")) as unknown as [Array<{ action: string }>];
+    expect(audit.map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DELETE']);
   });
 
   it('permissions: trainer cannot view, receptionist cannot delete', async () => {

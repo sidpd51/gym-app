@@ -69,7 +69,8 @@ describe('equipment', () => {
     expect((await client.get(`/equipment/${eq.body.id}`)).body.code).toBe('EQUIPMENT_NOT_FOUND');
     expect((await client.delete(`/equipment-categories/${cat.body.id}`)).status).toBe(204);
 
-    const audit = await env.pool.query("SELECT entity_type, action FROM audit_logs WHERE entity_type::text LIKE 'EQUIPMENT%'");
+    const [auditRows] = await env.pool.query("SELECT entity_type, action FROM audit_logs WHERE entity_type LIKE 'EQUIPMENT%'");
+    const audit = { rows: auditRows as Array<{ entity_type: string; action: string }> };
     expect(audit.rows.some((r) => r.entity_type === 'EQUIPMENT_MAINTENANCE' && r.action === 'CREATE')).toBe(true);
     expect(audit.rows.filter((r) => r.action === 'DELETE')).toHaveLength(2);
   });

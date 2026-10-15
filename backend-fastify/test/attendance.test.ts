@@ -45,8 +45,8 @@ describe('attendance', () => {
     expect(list.body.meta.total).toBe(1);
     expect((await client.get('/attendance?memberId=zzz')).body.code).toBe('INVALID_UUID');
     expect((await client.get('/attendance?toDate=nope')).body.code).toBe('INVALID_DATE');
-    const audit = await env.pool.query("SELECT 1 FROM audit_logs WHERE entity_type='ATTENDANCE'");
-    expect(audit.rowCount).toBe(1);
+    const [audit] = await env.pool.query("SELECT 1 FROM audit_logs WHERE entity_type='ATTENDANCE'");
+    expect((audit as unknown[]).length).toBe(1);
   });
 
   it('links the active membership', async () => {

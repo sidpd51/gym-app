@@ -65,9 +65,9 @@ describe('expenses', () => {
     expect((await client.patch(`/expense-categories/${cat.body.id}`, { name: 'Utilities2' })).body.name).toBe('Utilities2');
     expect((await client.delete(`/expense-categories/${cat.body.id}`)).status).toBe(204);
 
-    const audit = await env.pool.query("SELECT action, description FROM audit_logs WHERE entity_type='EXPENSE' ORDER BY timestamp");
-    expect(audit.rows.length).toBe(7);
-    expect(audit.rows.map((r) => r.description)).toContain('Expense 1500.5 UPI');
+    const [auditRows] = await env.pool.query("SELECT action, description FROM audit_logs WHERE entity_type='EXPENSE' ORDER BY timestamp");
+    expect((auditRows as any[]).length).toBe(7);
+    expect((auditRows as Array<{ description: string }>).map((r) => r.description)).toContain('Expense 1500.5 UPI');
   });
 
   it('enforces permissions', async () => {

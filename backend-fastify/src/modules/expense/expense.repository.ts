@@ -1,4 +1,4 @@
-import { exec, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
+import { exec, newId, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
 import type { ExpenseRow } from './expense.model.js';
 import type { ExpenseInput, ExpenseUpdateInput } from './expense.schemas.js';
 
@@ -8,24 +8,29 @@ export interface ExpenseFilter {
   to?: string;
 }
 
-const FILTER = `WHERE ($1::uuid IS NULL OR category_id = $1::uuid)
-  AND ($2::date IS NULL OR expense_date >= $2::date)
-  AND ($3::date IS NULL OR expense_date <= $3::date)`;
+const FILTER = `WHERE (? IS NULL OR category_id = ?)
+  AND (? IS NULL OR expense_date >= ?)
+  AND (? IS NULL OR expense_date <= ?)`;
 
-const filterParams = (f: ExpenseFilter) => [f.categoryId ?? null, f.from ?? null, f.to ?? null];
+const filterParams = (f: ExpenseFilter) => {
+  const c = f.categoryId ?? null;
+  const from = f.from ?? null;
+  const to = f.to ?? null;
+  return [c, c, from, from, to, to];
+};
 
 /** Data access for `expenses`. SQL only; no business rules. */
 export class ExpenseRepository {
   constructor(private readonly pool: DbPool) {}
 
   findById(id: string, db: Db = this.pool) {
-    return queryOne<ExpenseRow>(db, 'SELECT * FROM expenses WHERE id = $1', [id]);
+    return queryOne<ExpenseRow>(db, 'SELECT * FROM expenses WHERE id = ?', [id]);
   }
 
   list(f: ExpenseFilter, limit: number, offset: number, db: Db = this.pool) {
     return queryMany<ExpenseRow>(
       db,
-      `SELECT * FROM expenses ${FILTER} ORDER BY expense_date DESC, created_at DESC LIMIT $4 OFFSET $5`,
+      `SELECT * FROM expenses ${FILTER} ORDER BY expense_date DESC, created_at DESC LIMIT ? OFFSET ?`,
       [...filterParams(f), limit, offset],
     );
   }
@@ -36,30 +41,32 @@ export class ExpenseRepository {
   }
 
   async insert(code: string, req: ExpenseInput, db: Db = this.pool): Promise<ExpenseRow> {
-    const row = await queryOne<ExpenseRow>(
+    const id = newId();
+    await exec(
       db,
-      `INSERT INTO expenses (expense_code, category_id, description, amount, expense_date, payment_method, vendor, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [code, req.categoryId, req.description, req.amount, req.expenseDate, req.paymentMethod, req.vendor ?? null, req.notes ?? null],
+      `INSERT INTO expenses (id, expense_code, category_id, description, amount, expense_date, payment_method, vendor, notes)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [id, code, req.categoryId, req.description, req.amount, req.expenseDate, req.paymentMethod, req.vendor ?? null, req.notes ?? null],
     );
-    return row!;
+    return (await this.findById(id, db))!;
   }
 
-  update(id: string, req: ExpenseUpdateInput, db: Db = this.pool) {
-    return queryOne<ExpenseRow>(
+  async update(id: string, req: ExpenseUpdateInput, db: Db = this.pool) {
+    const matched = await exec(
       db,
       `UPDATE expenses
-       SET category_id = COALESCE($2, category_id), description = COALESCE($3, description),
-           amount = COALESCE($4, amount), expense_date = COALESCE($5, expense_date),
-           payment_method = COALESCE($6::expense_payment_method, payment_method),
-           vendor = COALESCE($7, vendor), notes = COALESCE($8, notes)
-       WHERE id = $1 RETURNING *`,
-      [id, req.categoryId ?? null, req.description ?? null, req.amount ?? null, req.expenseDate ?? null,
-       req.paymentMethod ?? null, req.vendor ?? null, req.notes ?? null],
+       SET category_id = COALESCE(?, category_id), description = COALESCE(?, description),
+           amount = COALESCE(?, amount), expense_date = COALESCE(?, expense_date),
+           payment_method = COALESCE(?, payment_method),
+           vendor = COALESCE(?, vendor), notes = COALESCE(?, notes)
+       WHERE id = ?`,
+      [req.categoryId ?? null, req.description ?? null, req.amount ?? null, req.expenseDate ?? null,
+       req.paymentMethod ?? null, req.vendor ?? null, req.notes ?? null, id],
     );
+    return matched ? this.findById(id, db) : undefined;
   }
 
   delete(id: string, db: Db = this.pool) {
-    return exec(db, 'DELETE FROM expenses WHERE id = $1', [id]);
+    return exec(db, 'DELETE FROM expenses WHERE id = ?', [id]);
   }
 }

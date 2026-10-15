@@ -1,4 +1,4 @@
-import { exec, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
+import { exec, newId, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
 import type { CategoryRow } from './inventory.model.js';
 import type { CategoryInput, CreateCategoryInput } from './inventory.schemas.js';
 
@@ -11,27 +11,29 @@ export class InventoryCategoryRepository {
   }
 
   async insert(req: CreateCategoryInput, db: Db = this.pool): Promise<CategoryRow> {
-    const row = await queryOne<CategoryRow>(
+    const id = newId();
+    await exec(
       db,
-      'INSERT INTO inventory_categories (name, description, status) VALUES ($1, $2, $3) RETURNING *',
-      [req.name, req.description ?? null, req.status ?? 'ACTIVE'],
+      'INSERT INTO inventory_categories (id, name, description, status) VALUES (?, ?, ?, ?)',
+      [id, req.name, req.description ?? null, req.status ?? 'ACTIVE'],
     );
-    return row!;
+    return (await queryOne<CategoryRow>(db, 'SELECT * FROM inventory_categories WHERE id = ?', [id]))!;
   }
 
   /** Partial update; empty name means unchanged. Undefined result = no such category. */
-  update(id: string, req: CategoryInput, db: Db = this.pool) {
-    return queryOne<CategoryRow>(
+  async update(id: string, req: CategoryInput, db: Db = this.pool) {
+    const matched = await exec(
       db,
       `UPDATE inventory_categories
-       SET name = COALESCE($2, name), description = COALESCE($3, description),
-           status = COALESCE($4::category_status, status)
-       WHERE id = $1 RETURNING *`,
-      [id, req.name || null, req.description ?? null, req.status ?? null],
+       SET name = COALESCE(?, name), description = COALESCE(?, description),
+           status = COALESCE(?, status)
+       WHERE id = ?`,
+      [req.name || null, req.description ?? null, req.status ?? null, id],
     );
+    return matched ? queryOne<CategoryRow>(db, 'SELECT * FROM inventory_categories WHERE id = ?', [id]) : undefined;
   }
 
   delete(id: string, db: Db = this.pool) {
-    return exec(db, 'DELETE FROM inventory_categories WHERE id = $1', [id]);
+    return exec(db, 'DELETE FROM inventory_categories WHERE id = ?', [id]);
   }
 }

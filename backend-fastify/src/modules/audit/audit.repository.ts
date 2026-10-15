@@ -2,14 +2,20 @@ import { queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
 import type { AuditRow } from './audit.model.js';
 import type { AuditFilter } from './audit.schemas.js';
 
-const WHERE = `WHERE ($1::audit_action IS NULL OR action = $1::audit_action)
-  AND ($2::audit_entity_type IS NULL OR entity_type = $2::audit_entity_type)
-  AND ($3::uuid IS NULL OR user_id = $3::uuid)
-  AND ($4::audit_status IS NULL OR status = $4::audit_status)
-  AND ($5::timestamptz IS NULL OR timestamp >= $5::timestamptz)
-  AND ($6::timestamptz IS NULL OR timestamp <= $6::timestamptz)`;
+const WHERE = `WHERE (? IS NULL OR action = ?)
+  AND (? IS NULL OR entity_type = ?)
+  AND (? IS NULL OR user_id = ?)
+  AND (? IS NULL OR status = ?)
+  AND (? IS NULL OR timestamp >= ?)
+  AND (? IS NULL OR timestamp <= ?)`;
 
-const params = (f: AuditFilter) => [f.action, f.entityType, f.userId, f.status, f.from, f.to];
+// Each filter appears twice in WHERE (IS NULL guard + comparison), so every value is passed twice.
+// from/to are ISO instants; pass Dates so mysql2 formats them as UTC DATETIME.
+const params = (f: AuditFilter) => {
+  const from = f.from ? new Date(f.from) : null;
+  const to = f.to ? new Date(f.to) : null;
+  return [f.action, f.action, f.entityType, f.entityType, f.userId, f.userId, f.status, f.status, from, from, to, to];
+};
 
 export class AuditRepository {
   constructor(private readonly pool: DbPool) {}
@@ -17,7 +23,7 @@ export class AuditRepository {
   list(f: AuditFilter, limit: number, offset: number, db: Db = this.pool) {
     return queryMany<AuditRow>(
       db,
-      `SELECT * FROM audit_logs ${WHERE} ORDER BY timestamp DESC LIMIT $7 OFFSET $8`,
+      `SELECT * FROM audit_logs ${WHERE} ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
       [...params(f), limit, offset],
     );
   }
@@ -27,6 +33,6 @@ export class AuditRepository {
   }
 
   findById(id: string, db: Db = this.pool) {
-    return queryOne<AuditRow>(db, 'SELECT * FROM audit_logs WHERE id = $1', [id]);
+    return queryOne<AuditRow>(db, 'SELECT * FROM audit_logs WHERE id = ?', [id]);
   }
 }

@@ -44,8 +44,8 @@ describe('memberships', () => {
     expect(list.body.meta.total).toBe(1);
     expect((await client.get('/memberships?memberId=nope')).body.code).toBe('INVALID_UUID');
 
-    const audit = await env.pool.query("SELECT 1 FROM audit_logs WHERE entity_type='MEMBERSHIP'");
-    expect(audit.rowCount).toBe(1);
+    const [audit] = await env.pool.query("SELECT 1 FROM audit_logs WHERE entity_type='MEMBERSHIP'");
+    expect((audit as unknown[]).length).toBe(1);
   });
 
   it('trainer can view but not create', async () => {

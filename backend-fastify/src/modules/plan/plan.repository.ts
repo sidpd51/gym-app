@@ -1,53 +1,55 @@
-import { exec, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
+import { exec, newId, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
 import type { PlanRow } from './plan.model.js';
 import type { CreatePlanInput, UpdatePlanInput } from './plan.schemas.js';
 
-const FILTER = `WHERE ($1::plan_status IS NULL OR status = $1::plan_status)`;
+const FILTER = `WHERE (? IS NULL OR status = ?)`;
 
 /** Data access for `membership_plans`: all SQL, no business rules. */
 export class PlanRepository {
   constructor(private readonly pool: DbPool) {}
 
   findById(id: string, db: Db = this.pool) {
-    return queryOne<PlanRow>(db, 'SELECT * FROM membership_plans WHERE id = $1', [id]);
+    return queryOne<PlanRow>(db, 'SELECT * FROM membership_plans WHERE id = ?', [id]);
   }
 
   list(status: string | undefined, limit: number, offset: number, db: Db = this.pool) {
     return queryMany<PlanRow>(
       db,
-      `SELECT * FROM membership_plans ${FILTER} ORDER BY name ASC LIMIT $2 OFFSET $3`,
-      [status || null, limit, offset],
+      `SELECT * FROM membership_plans ${FILTER} ORDER BY name ASC LIMIT ? OFFSET ?`,
+      [status || null, status || null, limit, offset],
     );
   }
 
   async count(status: string | undefined, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM membership_plans ${FILTER}`, [status || null]);
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM membership_plans ${FILTER}`, [status || null, status || null]);
     return row!.count;
   }
 
   async insert(req: CreatePlanInput, db: Db = this.pool): Promise<PlanRow> {
-    const row = await queryOne<PlanRow>(
+    const id = newId();
+    await exec(
       db,
-      `INSERT INTO membership_plans (name, description, duration_in_days, price, status)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [req.name, req.description ?? null, req.durationInDays, req.price, req.status ?? 'ACTIVE'],
+      `INSERT INTO membership_plans (id, name, description, duration_in_days, price, status)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, req.name, req.description ?? null, req.durationInDays, req.price, req.status ?? 'ACTIVE'],
     );
-    return row!;
+    return (await this.findById(id, db))!;
   }
 
-  update(id: string, req: UpdatePlanInput, db: Db = this.pool) {
-    return queryOne<PlanRow>(
+  async update(id: string, req: UpdatePlanInput, db: Db = this.pool) {
+    const matched = await exec(
       db,
       `UPDATE membership_plans
-       SET name = COALESCE($2, name), description = COALESCE($3, description),
-           duration_in_days = COALESCE($4, duration_in_days), price = COALESCE($5, price),
-           status = COALESCE($6::plan_status, status)
-       WHERE id = $1 RETURNING *`,
-      [id, req.name ?? null, req.description ?? null, req.durationInDays ?? null, req.price ?? null, req.status ?? null],
+       SET name = COALESCE(?, name), description = COALESCE(?, description),
+           duration_in_days = COALESCE(?, duration_in_days), price = COALESCE(?, price),
+           status = COALESCE(?, status)
+       WHERE id = ?`,
+      [req.name ?? null, req.description ?? null, req.durationInDays ?? null, req.price ?? null, req.status ?? null, id],
     );
+    return matched ? this.findById(id, db) : undefined;
   }
 
   delete(id: string, db: Db = this.pool) {
-    return exec(db, 'DELETE FROM membership_plans WHERE id = $1', [id]);
+    return exec(db, 'DELETE FROM membership_plans WHERE id = ?', [id]);
   }
 }

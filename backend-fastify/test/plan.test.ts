@@ -38,8 +38,8 @@ describe('membership plans', () => {
 
     expect((await client.delete(`/membership-plans/${id}`)).status).toBe(204);
     expect((await client.get(`/membership-plans/${id}`)).status).toBe(404);
-    const audit = await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='MEMBERSHIP_PLAN' ORDER BY timestamp");
-    expect(audit.rows.map((r) => r.action)).toEqual(['CREATE', 'CREATE', 'UPDATE', 'DELETE']);
+    const [audit] = await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='MEMBERSHIP_PLAN' ORDER BY timestamp");
+    expect((audit as Array<{ action: string }>).map((r) => r.action)).toEqual(['CREATE', 'CREATE', 'UPDATE', 'DELETE']);
   });
 
   it('denies receptionist create, allows view', async () => {

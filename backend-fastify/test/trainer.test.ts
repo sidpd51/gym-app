@@ -32,8 +32,8 @@ describe('trainers', () => {
     expect((await client.get('/trainers/00000000-0000-0000-0000-000000000000')).body.code).toBe('TRAINER_NOT_FOUND');
     expect((await client.delete(`/trainers/${id}`)).status).toBe(204);
 
-    const audit = await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='TRAINER' ORDER BY timestamp");
-    expect(audit.rows.map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DELETE']);
+    const [audit] = (await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='TRAINER' ORDER BY timestamp")) as unknown as [Array<{ action: string }>];
+    expect(audit.map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DELETE']);
   });
 
   it('permissions', async () => {
@@ -59,8 +59,8 @@ describe('trainers', () => {
     expect(a1.body).toMatchObject({ trainerId: t1.id, status: 'ACTIVE', endDate: null });
     const a2 = await client.post(`/members/${m.id}/trainer`, { trainerId: t2.id });
     expect(a2.body.trainerId).toBe(t2.id);
-    const rows = await env.pool.query('SELECT status FROM member_trainer_assignments WHERE member_id=$1 ORDER BY created_at', [m.id]);
-    expect(rows.rows.map((r) => r.status).sort()).toEqual(['ACTIVE', 'ENDED']);
+    const [rows] = (await env.pool.query('SELECT status FROM member_trainer_assignments WHERE member_id=? ORDER BY created_at', [m.id])) as unknown as [Array<{ status: string }>];
+    expect(rows.map((r) => r.status).sort()).toEqual(['ACTIVE', 'ENDED']);
     expect((await client.get(`/members/${m.id}/trainer`)).body.trainerId).toBe(t2.id);
 
     // trainer with assignment history cannot be deleted

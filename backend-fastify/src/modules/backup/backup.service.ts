@@ -9,7 +9,7 @@ import type { BackupFile } from './backup.model.js';
 
 const pad = (n: number, w = 2) => String(n).padStart(w, '0');
 
-/** Wraps pg_dump / psql via child_process. BackupDir is created on first use. */
+/** Wraps mysqldump / mysql via child_process. BackupDir is created on first use. */
 export class BackupService {
   /** Called after a successful restore; default raises SIGTERM so the service manager restarts us. */
   restartHook: () => void = () => {
@@ -23,9 +23,9 @@ export class BackupService {
   }
 
   /**
-   * Runs pg_dump into gymdb_YYYYMMDD[_HHMMSS].sql. With idempotentDaily the
+   * Runs mysqldump into gymdb_YYYYMMDD[_HHMMSS].sql. With idempotentDaily the
    * name drops the time portion, so same-day re-runs are no-ops. Docker mode
-   * (BACKUP_USE_DOCKER_EXEC) streams pg_dump stdout from inside the DB container.
+   * (BACKUP_USE_DOCKER_EXEC) streams mysqldump stdout from inside the DB container.
    */
   async create(idempotentDaily: boolean): Promise<BackupFile> {
     await mkdir(this.cfg.backupDir, { recursive: true, mode: 0o750 });
@@ -41,28 +41,30 @@ export class BackupService {
     }
 
     const url = this.cfg.databaseUrl;
+    const c = connParts(url);
+    const dumpArgs = ['--single-transaction', '--routines', '--no-tablespaces', '--default-character-set=utf8mb4'];
     if (this.cfg.backupUseDockerExec) {
-      const { user, dbname } = dbParts(url);
       const out = createWriteStream(path);
       const res = await run(
         'docker',
-        ['exec', '-i', '-e', `PGPASSWORD=${dbPassword(url)}`, this.cfg.backupDockerContainer, 'pg_dump',
-          '-h', 'localhost', '-U', user, '-d', dbname, '--no-owner', '--no-privileges', '--format=plain'],
+        ['exec', '-i', '-e', `MYSQL_PWD=${c.password}`, this.cfg.backupDockerContainer, 'mysqldump',
+          '-h', 'localhost', '-u', c.user, ...dumpArgs, c.dbname],
         { stdout: out },
       );
       if (res.code !== 0) {
         await rm(path, { force: true });
-        throw new Error(`docker pg_dump failed: ${res.error ?? `exit ${res.code}`}: ${res.stderr}`);
+        throw new Error(`docker mysqldump failed: ${res.error ?? `exit ${res.code}`}: ${res.stderr}`);
       }
     } else {
+      const out = createWriteStream(path);
       const res = await run(
-        this.cfg.pgDumpBin || 'pg_dump',
-        ['--no-owner', '--no-privileges', '--format=plain', '--file', path, connString(url)],
-        { env: passwordEnv(url) },
+        this.cfg.mysqlDumpBin || 'mysqldump',
+        ['-h', c.host, '-P', c.port, '-u', c.user, ...dumpArgs, c.dbname],
+        { env: passwordEnv(c.password), stdout: out },
       );
       if (res.code !== 0) {
         await rm(path, { force: true });
-        throw new Error(`pg_dump failed: ${res.error ?? `exit ${res.code}`}: ${res.stdout}${res.stderr}`);
+        throw new Error(`mysqldump failed: ${res.error ?? `exit ${res.code}`}: ${res.stderr}`);
       }
     }
     const info = await stat(path);
@@ -90,25 +92,24 @@ export class BackupService {
     return out.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  /** Streams a SQL dump into `psql` (locally, or inside the DB container in docker mode). */
+  /** Streams a SQL dump into `mysql` (locally, or inside the DB container in docker mode). */
   async restore(sql: Readable): Promise<void> {
-    const url = this.cfg.databaseUrl;
+    const c = connParts(this.cfg.databaseUrl);
     if (this.cfg.backupUseDockerExec) {
-      const { user, dbname } = dbParts(url);
       const res = await run(
         'docker',
-        ['exec', '-i', '-e', `PGPASSWORD=${dbPassword(url)}`, this.cfg.backupDockerContainer, 'psql',
-          '-h', 'localhost', '-U', user, '-d', dbname, '--set', 'ON_ERROR_STOP=on'],
+        ['exec', '-i', '-e', `MYSQL_PWD=${c.password}`, this.cfg.backupDockerContainer, 'mysql',
+          '-h', 'localhost', '-u', c.user, c.dbname],
         { stdin: sql },
       );
-      if (res.code !== 0) throw new Error(`docker psql restore failed: ${res.error ?? `exit ${res.code}`}: ${res.stderr}`);
+      if (res.code !== 0) throw new Error(`docker mysql restore failed: ${res.error ?? `exit ${res.code}`}: ${res.stderr}`);
       return;
     }
-    const res = await run(this.cfg.psqlBin || 'psql', ['--set', 'ON_ERROR_STOP=on', connString(url)], {
+    const res = await run(this.cfg.mysqlBin || 'mysql', ['-h', c.host, '-P', c.port, '-u', c.user, c.dbname], {
       stdin: sql,
-      env: passwordEnv(url),
+      env: passwordEnv(c.password),
     });
-    if (res.code !== 0) throw new Error(`psql restore failed: ${res.error ?? `exit ${res.code}`}: ${res.stdout}${res.stderr}`);
+    if (res.code !== 0) throw new Error(`mysql restore failed: ${res.error ?? `exit ${res.code}`}: ${res.stdout}${res.stderr}`);
   }
 }
 
@@ -145,31 +146,22 @@ function run(
   });
 }
 
-/** DATABASE_URL minus the password (which goes to PGPASSWORD so it never shows in process listings). */
-function connString(databaseUrl: string): string {
-  const u = new URL(databaseUrl);
-  u.password = '';
-  return u.toString();
+/** Password goes via MYSQL_PWD so it never shows in process listings. */
+function passwordEnv(password: string): Record<string, string> {
+  return password ? { MYSQL_PWD: password } : {};
 }
 
-function passwordEnv(databaseUrl: string): Record<string, string> {
-  const pw = dbPassword(databaseUrl);
-  return pw ? { PGPASSWORD: pw } : {};
-}
-
-function dbPassword(databaseUrl: string): string {
-  try {
-    return decodeURIComponent(new URL(databaseUrl).password);
-  } catch {
-    return '';
-  }
-}
-
-/** user/dbname for docker-exec mode; host is irrelevant (always -h localhost inside the container). */
-function dbParts(databaseUrl: string): { user: string; dbname: string } {
+/** Host/port/user/password/dbname from a mysql://user:pass@host:port/db DATABASE_URL. */
+function connParts(databaseUrl: string): { host: string; port: string; user: string; password: string; dbname: string } {
   const u = new URL(databaseUrl);
   const dbname = u.pathname.replace(/^\//, '');
   const user = decodeURIComponent(u.username);
   if (!user || !dbname) throw new Error('DATABASE_URL must include user and dbname');
-  return { user, dbname };
+  return {
+    host: u.hostname || '127.0.0.1',
+    port: u.port || '3306',
+    user,
+    password: decodeURIComponent(u.password),
+    dbname,
+  };
 }

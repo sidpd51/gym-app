@@ -68,8 +68,8 @@ describe('inventory', () => {
     expect(catUpd.body.status).toBe('INACTIVE');
     expect((await client.get('/inventory-categories')).body).toHaveLength(1);
 
-    const audit = await env.pool.query("SELECT description FROM audit_logs WHERE entity_type='INVENTORY_ITEM'");
-    expect(audit.rows.map((r) => r.description)).toContain('Inventory STOCK_OUT qty=6');
+    const [auditRows] = await env.pool.query("SELECT description FROM audit_logs WHERE entity_type='INVENTORY_ITEM'");
+    expect((auditRows as Array<{ description: string }>).map((r) => r.description)).toContain('Inventory STOCK_OUT qty=6');
   });
 
   it('enforces permissions', async () => {

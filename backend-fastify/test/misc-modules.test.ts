@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../src/app.js';
-import { createPool } from '../src/db/pool.js';
+import { createPool, newId } from '../src/db/pool.js';
 import { loggedIn, setup, testConfig } from './helpers/client.js';
 import { startTestDb, type TestDb } from './helpers/testdb.js';
 
@@ -25,11 +25,12 @@ describe('report', () => {
   it('overview aggregates the default month and honours ranges', async () => {
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
     await owner.client.post('/members', { firstName: 'Rep', lastName: 'Ort', phone: '9000000001', joiningDate: today });
-    const cat = (await env.pool.query("INSERT INTO expense_categories (name) VALUES ('Rent') RETURNING id")).rows[0].id;
+    const cat = newId();
+    await env.pool.query("INSERT INTO expense_categories (id, name) VALUES (?, 'Rent')", [cat]);
     await env.pool.query(
-      `INSERT INTO expenses (expense_code, category_id, description, amount, expense_date, payment_method)
-       VALUES ('EXP-900', $1, 'rent', 1500.50, $2, (SELECT unnest(enum_range(NULL::expense_payment_method)) LIMIT 1))`,
-      [cat, today],
+      `INSERT INTO expenses (id, expense_code, category_id, description, amount, expense_date, payment_method)
+       VALUES (?, 'EXP-900', ?, 'rent', 1500.50, ?, 'CASH')`,
+      [newId(), cat, today],
     );
     const r = await owner.client.get('/reports/overview');
     expect(r.status).toBe(200);
@@ -73,8 +74,8 @@ describe('settings', () => {
     expect((await admin.client.get('/settings')).status).toBe(200);
     expect((await admin.client.patch('/settings', { gymName: 'x' })).status).toBe(403);
 
-    const a = await env.pool.query("SELECT entity_id FROM audit_logs WHERE entity_type='SETTINGS'");
-    expect(a.rows).toEqual([{ entity_id: '1' }]);
+    const [a] = await env.pool.query("SELECT entity_id FROM audit_logs WHERE entity_type='SETTINGS'");
+    expect(a).toEqual([{ entity_id: '1' }]);
   });
 });
 
@@ -108,8 +109,8 @@ describe('audit', () => {
 describe('search', () => {
   it('validates length and filters groups by permission', async () => {
     await env.pool.query(
-      `INSERT INTO trainers (trainer_code, first_name, last_name, phone, joining_date) VALUES ('TRN-900','Zed','Coach','8000000001','2024-01-01')`);
-    await env.pool.query(`INSERT INTO leads (lead_code, name, phone) VALUES ('LEAD-900','Zed Lead','7000000001')`);
+      `INSERT INTO trainers (id, trainer_code, first_name, last_name, phone, joining_date) VALUES (UUID(),'TRN-900','Zed','Coach','8000000001','2024-01-01')`);
+    await env.pool.query(`INSERT INTO leads (id, lead_code, name, phone) VALUES (UUID(), 'LEAD-900','Zed Lead','7000000001')`);
     await owner.client.post('/members', { firstName: 'Zed', lastName: 'Member', phone: '9000000002', joiningDate: '2024-01-01' });
 
     expect((await owner.client.get('/search?q=z')).body.code).toBe('QUERY_TOO_SHORT');
@@ -136,19 +137,18 @@ describe('backup', () => {
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), 'gym-backup-'));
     restored = join(dir, 'restored.txt');
-    const dump = join(dir, 'fake_pg_dump.sh');
+    const dump = join(dir, 'fake_mysqldump.sh');
     writeFileSync(dump, `#!/bin/sh
-while [ $# -gt 0 ]; do [ "$1" = "--file" ] && { shift; f="$1"; }; shift; done
-echo "-- fake dump pw=$PGPASSWORD" > "$f"
+echo "-- fake dump pw=$MYSQL_PWD args=$*"
 `);
-    const psql = join(dir, 'fake_psql.sh');
-    writeFileSync(psql, `#!/bin/sh\ncat > "${restored}"\n`);
+    const mysqlBin = join(dir, 'fake_mysql.sh');
+    writeFileSync(mysqlBin, `#!/bin/sh\ncat > "${restored}"\n`);
     chmodSync(dump, 0o755);
-    chmodSync(psql, 0o755);
+    chmodSync(mysqlBin, 0o755);
     pool = await createPool(db.url);
     app = await buildApp(
-      { ...testConfig('postgres://gymuser:s3cret@localhost:5432/gymdb'), databaseUrl: 'postgres://gymuser:s3cret@localhost:5432/gymdb',
-        backupDir: join(dir, 'out'), pgDumpBin: dump, psqlBin: psql },
+      { ...testConfig('mysql://gymuser:s3cret@localhost:3306/gymdb'), databaseUrl: 'mysql://gymuser:s3cret@localhost:3306/gymdb',
+        backupDir: join(dir, 'out'), mysqlDumpBin: dump, mysqlBin: mysqlBin },
       pool,
     );
     await app.ready();
@@ -201,14 +201,14 @@ echo "-- fake dump pw=$PGPASSWORD" > "$f"
 
   it('daily create is idempotent per date; failures map to BACKUP_FAILED', async () => {
     const { BackupService } = await import('../src/modules/backup/index.js');
-    const ctx = { pool, log: app.log, config: { ...testConfig(db.url), backupDir: join(dir, 'daily'), pgDumpBin: join(dir, 'fake_pg_dump.sh') } };
+    const ctx = { pool, log: app.log, config: { ...testConfig(db.url), backupDir: join(dir, 'daily'), mysqlDumpBin: join(dir, 'fake_mysqldump.sh') } };
     const svc = new BackupService(ctx as any);
     const a = await svc.create(true);
     const b = await svc.create(true);
     expect(a.name).toMatch(/^gymdb_\d{8}\.sql$/);
     expect(b).toEqual(a);
 
-    const bad = new BackupService({ ...ctx, config: { ...ctx.config, backupDir: join(dir, 'bad'), pgDumpBin: '/nonexistent/pg_dump' } } as any);
-    await expect(bad.create(false)).rejects.toThrow(/pg_dump failed/);
+    const bad = new BackupService({ ...ctx, config: { ...ctx.config, backupDir: join(dir, 'bad'), mysqlDumpBin: '/nonexistent/mysqldump' } } as any);
+    await expect(bad.create(false)).rejects.toThrow(/mysqldump failed/);
   });
 });

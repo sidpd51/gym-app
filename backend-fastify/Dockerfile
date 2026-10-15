@@ -10,9 +10,9 @@ COPY src ./src
 RUN npm run build && npm prune --omit=dev
 
 FROM node:20-alpine
-# postgresql-client provides pg_dump/psql for the backup service;
+# mysql-client provides mysqldump/mysql for the backup service;
 # tzdata for Asia/Kolkata scheduling.
-RUN apk add --no-cache postgresql-client tzdata
+RUN apk add --no-cache mysql-client tzdata
 ENV TZ=Asia/Kolkata NODE_ENV=production MIGRATIONS_DIR=/app/migrations
 WORKDIR /app
 COPY --from=builder /src/node_modules ./node_modules

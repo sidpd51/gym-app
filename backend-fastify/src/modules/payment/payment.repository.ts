@@ -1,11 +1,12 @@
-import { queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
+import { exec, newId, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
 import type { PaymentRow } from './payment.model.js';
 import type { CreatePaymentInput } from './payment.schemas.js';
 
-const FILTER = `WHERE ($1::payment_status IS NULL OR status = $1::payment_status)
-  AND ($2::uuid IS NULL OR member_id = $2::uuid)
-  AND ($3::date IS NULL OR payment_date >= $3::date)
-  AND ($4::date IS NULL OR payment_date <= $4::date)`;
+const FILTER = `WHERE (? IS NULL OR status = ?)
+  AND (? IS NULL OR member_id = ?)
+  AND (? IS NULL OR payment_date >= ?)
+  AND (? IS NULL OR payment_date <= ?)`;
+const filterParams = (f: PaymentFilter) => [f.status, f.status, f.memberId, f.memberId, f.from, f.from, f.to, f.to];
 
 export interface PaymentFilter {
   status: string | null;
@@ -19,32 +20,33 @@ export class PaymentRepository {
   constructor(private readonly pool: DbPool) {}
 
   findById(id: string, db: Db = this.pool) {
-    return queryOne<PaymentRow>(db, 'SELECT * FROM payments WHERE id = $1', [id]);
+    return queryOne<PaymentRow>(db, 'SELECT * FROM payments WHERE id = ?', [id]);
   }
 
   list(f: PaymentFilter, limit: number, offset: number, db: Db = this.pool) {
     return queryMany<PaymentRow>(
       db,
-      `SELECT * FROM payments ${FILTER} ORDER BY payment_date DESC, created_at DESC LIMIT $5 OFFSET $6`,
-      [f.status, f.memberId, f.from, f.to, limit, offset],
+      `SELECT * FROM payments ${FILTER} ORDER BY payment_date DESC, created_at DESC LIMIT ? OFFSET ?`,
+      [...filterParams(f), limit, offset],
     );
   }
 
   async count(f: PaymentFilter, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM payments ${FILTER}`, [f.status, f.memberId, f.from, f.to]);
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM payments ${FILTER}`, filterParams(f));
     return row!.count;
   }
 
   async insert(req: CreatePaymentInput, db: Db = this.pool): Promise<PaymentRow> {
-    const row = await queryOne<PaymentRow>(
+    const id = newId();
+    await exec(
       db,
-      `INSERT INTO payments (member_id, membership_id, amount, payment_method, payment_date, status, reference, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      `INSERT INTO payments (id, member_id, membership_id, amount, payment_method, payment_date, status, reference, notes)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
       [
-        req.memberId, req.membershipId ?? null, req.amount, req.paymentMethod, req.paymentDate,
+        id, req.memberId, req.membershipId ?? null, req.amount, req.paymentMethod, req.paymentDate,
         req.status ?? 'COMPLETED', req.reference ?? null, req.notes ?? null,
       ],
     );
-    return row!;
+    return (await this.findById(id, db))!;
   }
 }

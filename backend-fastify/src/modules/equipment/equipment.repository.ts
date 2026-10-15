@@ -1,11 +1,15 @@
-import { exec, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
+import { exec, newId, queryMany, queryOne, type Db, type DbPool } from '../../db/pool.js';
 import type { CategoryRow, EquipmentRow, MaintenanceRow } from './equipment.model.js';
 import type {
   CategoryInput, CategoryUpdateInput, EquipmentInput, EquipmentUpdateInput, MaintenanceInput,
 } from './equipment.schemas.js';
 
-const EQ_FILTER = `WHERE ($1::equipment_status IS NULL OR status = $1::equipment_status)
-  AND ($2::uuid IS NULL OR category_id = $2::uuid)`;
+const EQ_FILTER = `WHERE (? IS NULL OR status = ?) AND (? IS NULL OR category_id = ?)`;
+const eqParams = (f: { status?: string; categoryId?: string }) => {
+  const status = f.status || null;
+  const categoryId = f.categoryId || null;
+  return [status, status, categoryId, categoryId];
+};
 
 export interface EquipmentFilter {
   status?: string;
@@ -26,81 +30,81 @@ export class EquipmentRepository {
   }
 
   async insertCategory(req: CategoryInput, db: Db = this.pool): Promise<CategoryRow> {
-    const row = await queryOne<CategoryRow>(
+    const id = newId();
+    await exec(
       db,
-      'INSERT INTO equipment_categories (name, description, status) VALUES ($1, $2, $3) RETURNING *',
-      [req.name, req.description ?? null, req.status ?? 'ACTIVE'],
+      'INSERT INTO equipment_categories (id, name, description, status) VALUES (?, ?, ?, ?)',
+      [id, req.name, req.description ?? null, req.status ?? 'ACTIVE'],
     );
-    return row!;
+    return (await queryOne<CategoryRow>(db, 'SELECT * FROM equipment_categories WHERE id = ?', [id]))!;
   }
 
   /** Partial update: empty/null fields are left unchanged. Undefined result = no such category. */
-  updateCategory(id: string, req: CategoryUpdateInput, db: Db = this.pool) {
-    return queryOne<CategoryRow>(
+  async updateCategory(id: string, req: CategoryUpdateInput, db: Db = this.pool) {
+    const matched = await exec(
       db,
       `UPDATE equipment_categories
-       SET name = COALESCE($2, name), description = COALESCE($3, description),
-           status = COALESCE($4::category_status, status)
-       WHERE id = $1 RETURNING *`,
-      [id, req.name || null, req.description ?? null, req.status ?? null],
+       SET name = COALESCE(?, name), description = COALESCE(?, description), status = COALESCE(?, status)
+       WHERE id = ?`,
+      [req.name || null, req.description ?? null, req.status ?? null, id],
     );
+    return matched ? queryOne<CategoryRow>(db, 'SELECT * FROM equipment_categories WHERE id = ?', [id]) : undefined;
   }
 
   deleteCategory(id: string, db: Db = this.pool) {
-    return exec(db, 'DELETE FROM equipment_categories WHERE id = $1', [id]);
+    return exec(db, 'DELETE FROM equipment_categories WHERE id = ?', [id]);
   }
 
   // --- equipment ---
 
   findEquipmentById(id: string, db: Db = this.pool) {
-    return queryOne<EquipmentRow>(db, 'SELECT * FROM equipment WHERE id = $1', [id]);
+    return queryOne<EquipmentRow>(db, 'SELECT * FROM equipment WHERE id = ?', [id]);
   }
 
   listEquipment(f: EquipmentFilter, limit: number, offset: number, db: Db = this.pool) {
     return queryMany<EquipmentRow>(
       db,
-      `SELECT * FROM equipment ${EQ_FILTER} ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
-      [f.status || null, f.categoryId || null, limit, offset],
+      `SELECT * FROM equipment ${EQ_FILTER} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...eqParams(f), limit, offset],
     );
   }
 
   async countEquipment(f: EquipmentFilter, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM equipment ${EQ_FILTER}`, [
-      f.status || null,
-      f.categoryId || null,
-    ]);
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM equipment ${EQ_FILTER}`, eqParams(f));
     return row!.count;
   }
 
   async insertEquipment(code: string, req: EquipmentInput, db: Db = this.pool): Promise<EquipmentRow> {
-    const row = await queryOne<EquipmentRow>(
+    const id = newId();
+    await exec(
       db,
-      `INSERT INTO equipment (equipment_code, name, category_id, brand, model, serial_number,
+      `INSERT INTO equipment (id, equipment_code, name, category_id, brand, model, serial_number,
          purchase_date, purchase_cost, location, status, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        code, req.name, req.categoryId, req.brand ?? null, req.model ?? null, req.serialNumber ?? null,
+        id, code, req.name, req.categoryId, req.brand ?? null, req.model ?? null, req.serialNumber ?? null,
         req.purchaseDate ?? null, req.purchaseCost ?? null, req.location ?? null, req.status ?? 'ACTIVE', req.notes ?? null,
       ],
     );
-    return row!;
+    return (await this.findEquipmentById(id, db))!;
   }
 
-  updateEquipment(id: string, req: EquipmentUpdateInput, db: Db = this.pool) {
-    return queryOne<EquipmentRow>(
+  async updateEquipment(id: string, req: EquipmentUpdateInput, db: Db = this.pool) {
+    const matched = await exec(
       db,
       `UPDATE equipment
-       SET name = COALESCE($2, name), brand = COALESCE($3, brand), model = COALESCE($4, model),
-           serial_number = COALESCE($5, serial_number), location = COALESCE($6, location),
-           status = COALESCE($7::equipment_status, status), notes = COALESCE($8, notes), updated_at = NOW()
-       WHERE id = $1 RETURNING *`,
-      [id, req.name ?? null, req.brand ?? null, req.model ?? null, req.serialNumber ?? null,
-        req.location ?? null, req.status ?? null, req.notes ?? null],
+       SET name = COALESCE(?, name), brand = COALESCE(?, brand), model = COALESCE(?, model),
+           serial_number = COALESCE(?, serial_number), location = COALESCE(?, location),
+           status = COALESCE(?, status), notes = COALESCE(?, notes), updated_at = NOW(3)
+       WHERE id = ?`,
+      [req.name ?? null, req.brand ?? null, req.model ?? null, req.serialNumber ?? null,
+        req.location ?? null, req.status ?? null, req.notes ?? null, id],
     );
+    return matched ? this.findEquipmentById(id, db) : undefined;
   }
 
   deleteEquipment(id: string, db: Db = this.pool) {
-    return exec(db, 'DELETE FROM equipment WHERE id = $1', [id]);
+    return exec(db, 'DELETE FROM equipment WHERE id = ?', [id]);
   }
 
   // --- maintenance ---
@@ -108,20 +112,21 @@ export class EquipmentRepository {
   listMaintenance(equipmentId: string, db: Db = this.pool) {
     return queryMany<MaintenanceRow>(
       db,
-      'SELECT * FROM equipment_maintenance WHERE equipment_id = $1 ORDER BY maintenance_date DESC',
+      'SELECT * FROM equipment_maintenance WHERE equipment_id = ? ORDER BY maintenance_date DESC',
       [equipmentId],
     );
   }
 
   async insertMaintenance(equipmentId: string, req: MaintenanceInput, db: Db = this.pool): Promise<MaintenanceRow> {
-    const row = await queryOne<MaintenanceRow>(
+    const id = newId();
+    await exec(
       db,
-      `INSERT INTO equipment_maintenance (equipment_id, maintenance_date, maintenance_type, description,
+      `INSERT INTO equipment_maintenance (id, equipment_id, maintenance_date, maintenance_type, description,
          cost, performed_by, next_maintenance_date, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [equipmentId, req.maintenanceDate, req.maintenanceType, req.description, req.cost ?? null,
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [id, equipmentId, req.maintenanceDate, req.maintenanceType, req.description, req.cost ?? null,
         req.performedBy ?? null, req.nextMaintenanceDate ?? null, req.notes ?? null],
     );
-    return row!;
+    return (await queryOne<MaintenanceRow>(db, 'SELECT * FROM equipment_maintenance WHERE id = ?', [id]))!;
   }
 }

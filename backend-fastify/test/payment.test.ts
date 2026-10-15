@@ -35,8 +35,8 @@ describe('payments', () => {
     expect((await client.get(`/payments/${p1.body.id}`)).body.id).toBe(p1.body.id);
     expect((await client.get('/payments/00000000-0000-4000-8000-000000000000')).body.code).toBe('PAYMENT_NOT_FOUND');
 
-    const audit = await env.pool.query("SELECT description FROM audit_logs WHERE entity_type='PAYMENT' ORDER BY timestamp");
-    expect(audit.rows[0].description).toBe('Payment 250.5 UPI');
+    const [audit] = await env.pool.query("SELECT description FROM audit_logs WHERE entity_type='PAYMENT' ORDER BY timestamp");
+    expect((audit as Array<{ description: string }>)[0].description).toBe('Payment 250.5 UPI');
   });
 
   it('trainer cannot view payments', async () => {
