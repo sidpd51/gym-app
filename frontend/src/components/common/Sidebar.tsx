@@ -109,13 +109,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2.5 px-4 py-4">
+      <div className="flex items-center gap-3 px-4 py-4">
         <img
-          src="/logo.png"
-          alt="Bajrang Fitness Club"
-          className="h-12 w-12 shrink-0 object-contain"
+          src="/logo.svg"
+          alt="The Elite Club"
+          className="h-10 w-10 shrink-0 object-contain"
         />
-        <span className="text-sm font-semibold leading-tight text-white">Bajrang Fitness Club</span>
+        <div className="min-w-0">
+          <div className="text-xs font-semibold tracking-[0.2em] text-white">THE ELITE CLUB</div>
+          <div className="text-[10px] font-medium tracking-[0.25em] text-zinc-500">ATHLETIC SOCIETY</div>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-2" aria-label="Main navigation">

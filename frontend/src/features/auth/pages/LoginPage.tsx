@@ -43,15 +43,19 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12">
       <div className="w-full max-w-sm">
         {/* Branding */}
-        <div className="mb-8 flex flex-col items-center gap-3">
+        <div className="mb-8 flex flex-col items-center gap-4">
           <img
-            src="/logo.png"
-            alt="Bajrang Fitness Club"
-            className="h-35 w-35 object-contain"
+            src="/logo.svg"
+            alt="The Elite Club"
+            className="h-20 w-20 object-contain"
           />
           <div className="text-center">
-            <h1 className="text-xl font-bold text-zinc-900">Bajrang Fitness Club</h1>
-            <p className="mt-0.5 text-sm text-zinc-500">Sign in to your account</p>
+            <h1 className="font-serif text-2xl font-semibold tracking-[0.2em] text-zinc-900">
+              THE ELITE CLUB
+            </h1>
+            <p className="mt-1 text-[11px] font-medium tracking-[0.3em] text-zinc-500">
+              ATHLETIC SOCIETY
+            </p>
           </div>
         </div>
 
