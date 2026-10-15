@@ -98,7 +98,11 @@ jobs:
         working-directory: backend-fastify
         run: npm run build
 
-      - name: Start backend (auto-migrates on boot)
+      - name: Run DB migrations
+        working-directory: backend-fastify
+        run: node dist/scripts/migrate.js up
+
+      - name: Start backend
         working-directory: backend-fastify
         run: |
           nohup npm start > backend.log 2>&1 &
