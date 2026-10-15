@@ -21,7 +21,7 @@ services:
       MYSQL_PASSWORD: dev
       MYSQL_ROOT_PASSWORD: dev-root
       TZ: Asia/Kolkata
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00", "--mysql-native-password=ON"]
     ports:
       - "3306:3306"
     volumes:
@@ -53,8 +53,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
       interval: 10s
-      timeout: 3s
+      timeout: 5s
       retries: 10
+      start_period: 60s
 
   frontend:
     build: ./frontend
