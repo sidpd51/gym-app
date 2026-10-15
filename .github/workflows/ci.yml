@@ -1,0 +1,186 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: Backend unit + integration tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-fastify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend-fastify/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  frontend-build:
+    name: Frontend type-check + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run build
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-build]
+    env:
+      SEED_EMAIL: owner@example.com
+      SEED_PASSWORD: ChangeMe123!
+      DATABASE_URL: mysql://gymuser:dev@127.0.0.1:3306/gymdb
+      JWT_SECRET: ci-jwt-secret-value-that-is-definitely-long-enough-for-tests
+      COOKIE_SECRET: ci-cookie-secret-value-that-is-definitely-long-enough-for-tests
+      FRONTEND_ORIGIN: http://localhost:5173
+      VITE_API_BASE_URL: http://localhost:8080
+      PORT: 8080
+      ENV: test
+      LOG_LEVEL: warn
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: gymdb
+          MYSQL_USER: gymuser
+          MYSQL_PASSWORD: dev
+          MYSQL_ROOT_PASSWORD: dev-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pdev-root --silent"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend-fastify/package-lock.json
+            frontend/package-lock.json
+
+      - name: Enable mysql native_password
+        run: |
+          mysql -h 127.0.0.1 -uroot -pdev-root -e "ALTER USER 'gymuser'@'%' IDENTIFIED WITH mysql_native_password BY 'dev'; FLUSH PRIVILEGES;"
+
+      - name: Install backend deps
+        working-directory: backend-fastify
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend-fastify
+        run: npm run build
+
+      - name: Start backend (auto-migrates on boot)
+        working-directory: backend-fastify
+        run: |
+          nohup npm start > backend.log 2>&1 &
+          echo $! > backend.pid
+          for i in {1..40}; do
+            if curl -sf http://localhost:8080/health > /dev/null; then
+              echo "backend up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "backend failed to start"
+          cat backend.log
+          exit 1
+
+      - name: Seed owner user
+        working-directory: backend-fastify
+        run: node dist/scripts/seed.js
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Serve frontend
+        working-directory: frontend
+        run: |
+          nohup npx vite preview --port 5173 --host --strictPort > frontend.log 2>&1 &
+          echo $! > frontend.pid
+          for i in {1..30}; do
+            if curl -sf http://localhost:5173 > /dev/null; then
+              echo "frontend up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "frontend failed to start"
+          cat frontend.log
+          exit 1
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        env:
+          CI: '1'
+          E2E_EMAIL: owner@example.com
+          E2E_PASSWORD: ChangeMe123!
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+          PLAYWRIGHT_API_URL: http://localhost:8080
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7
+
+      - name: Dump backend log on failure
+        if: failure()
+        run: cat backend-fastify/backend.log || true
+
+  security-audit:
+    name: npm audit (prod deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Backend audit (high+)
+        working-directory: backend-fastify
+        run: npm audit --audit-level=high --omit=dev || true
+      - name: Frontend audit (high+)
+        working-directory: frontend
+        run: npm audit --audit-level=high --omit=dev || true
