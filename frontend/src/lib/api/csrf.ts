@@ -14,10 +14,9 @@ let cachedToken: string | null = null
 let inflight: Promise<string | null> | null = null
 
 function buildUrl(path: string): string {
-  // Reuse the same base-resolution rule as client.ts
-  const base = env.apiBaseUrl || 'http://localhost'
+  if (!env.apiBaseUrl) return path
   try {
-    return new URL(path, base).toString()
+    return new URL(path, env.apiBaseUrl).toString()
   } catch {
     return path
   }

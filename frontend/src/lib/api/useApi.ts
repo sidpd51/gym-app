@@ -7,7 +7,7 @@
 //
 // These helpers standardize loading/error/refetch so every migrated feature
 // behaves the same and pages only need one pattern for skeletons + errors.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ListQueryParams, PaginatedResponse } from './types'
 import { ApiError } from './errors'
 
@@ -32,28 +32,27 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, depsKey = ''): AsyncSt
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<ApiError | null>(null)
   const [nonce, setNonce] = useState(0)
-  const activeRef = useRef(true)
 
   const refetch = useCallback(() => {
     setNonce((n) => n + 1)
   }, [])
 
   useEffect(() => {
-    activeRef.current = true
+    let active = true
     setIsLoading(true)
     setError(null)
     fetcher()
       .then((result) => {
-        if (activeRef.current) setData(result)
+        if (active) setData(result)
       })
       .catch((err: unknown) => {
-        if (activeRef.current) setError(toApiError(err))
+        if (active) setError(toApiError(err))
       })
       .finally(() => {
-        if (activeRef.current) setIsLoading(false)
+        if (active) setIsLoading(false)
       })
     return () => {
-      activeRef.current = false
+      active = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [depsKey, nonce])
@@ -90,7 +89,6 @@ export function useApiDetail<T>(id: string | undefined, fetcher: (id: string) =>
   const [isLoading, setIsLoading] = useState(!!id)
   const [error, setError] = useState<ApiError | null>(null)
   const [nonce, setNonce] = useState(0)
-  const activeRef = useRef(true)
 
   const refetch = useCallback(() => {
     setNonce((n) => n + 1)
@@ -102,21 +100,21 @@ export function useApiDetail<T>(id: string | undefined, fetcher: (id: string) =>
       setIsLoading(false)
       return
     }
-    activeRef.current = true
+    let active = true
     setIsLoading(true)
     setError(null)
     fetcher(id)
       .then((result) => {
-        if (activeRef.current) setData(result)
+        if (active) setData(result)
       })
       .catch((err: unknown) => {
-        if (activeRef.current) setError(toApiError(err))
+        if (active) setError(toApiError(err))
       })
       .finally(() => {
-        if (activeRef.current) setIsLoading(false)
+        if (active) setIsLoading(false)
       })
     return () => {
-      activeRef.current = false
+      active = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, nonce])
