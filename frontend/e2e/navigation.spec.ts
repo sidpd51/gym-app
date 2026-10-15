@@ -8,6 +8,9 @@ import { test, expect } from './fixtures'
  * interactive within a reasonable budget.
  */
 test('rapid sidebar nav does not freeze the UI', async ({ authedPage: page }) => {
+  await page.goto('/dashboard')
+  await expect(page.getByRole('main').getByRole('heading', { name: /dashboard/i })).toBeVisible()
+
   const routes = [
     '/members',
     '/memberships',
@@ -23,13 +26,13 @@ test('rapid sidebar nav does not freeze the UI', async ({ authedPage: page }) =>
 
   // Spam clicks with no awaits — stresses the fetch cancellation path.
   for (const to of routes) {
-    const link = page.locator(`a[href="${to}"]`).first()
+    const link = page.locator(`aside a[href="${to}"]`).first()
     await link.click({ noWaitAfter: true, force: true })
   }
 
   // After the storm, land on a known page and confirm it actually renders.
   await page.goto('/members')
-  await expect(page.getByRole('heading', { name: /members/i })).toBeVisible({
+  await expect(page.getByRole('main').getByRole('heading', { name: /members/i })).toBeVisible({
     timeout: 15_000,
   })
   // The page should be interactive (no stuck spinner).
@@ -38,7 +41,7 @@ test('rapid sidebar nav does not freeze the UI', async ({ authedPage: page }) =>
 
 test('reports tabs switch cleanly under rapid clicks', async ({ authedPage: page }) => {
   await page.goto('/reports')
-  await expect(page.getByRole('heading', { name: /reports/i })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('heading', { name: /reports/i })).toBeVisible()
 
   const tabs = ['overview', 'members', 'memberships', 'revenue', 'attendance', 'expenses', 'leads']
   for (const label of tabs) {

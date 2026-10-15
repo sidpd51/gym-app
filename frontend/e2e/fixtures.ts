@@ -12,10 +12,12 @@ export async function loginAs(page: Page, email = SEED_EMAIL, password = SEED_PA
   await expect(page).toHaveURL(/\/dashboard/)
 }
 
-/** A test fixture that starts already-authenticated. */
+/**
+ * Starts already-authenticated. The chromium project loads a cookie saved
+ * by `auth.setup.ts`, so this fixture just forwards the page unchanged.
+ */
 export const test = base.extend<{ authedPage: Page }>({
   authedPage: async ({ page }, use) => {
-    await loginAs(page)
     await use(page)
   },
 })

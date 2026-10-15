@@ -29,13 +29,25 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: CI ? 'retain-on-failure' : 'off',
-    extraHTTPHeaders: { 'x-e2e': '1' },
   },
 
   projects: [
+    // Runs once; produces playwright/.auth/user.json
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+
+    // Auth spec exercises login flows — must start signed-out.
+    {
+      name: 'auth',
+      testMatch: /auth\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: { cookies: [], origins: [] } },
+    },
+
+    // Everything else reuses the saved session.
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /auth\.(spec|setup)\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup'],
     },
   ],
 
