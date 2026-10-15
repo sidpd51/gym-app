@@ -51,8 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-build]
     env:
-      SEED_EMAIL: owner@example.com
-      SEED_PASSWORD: ChangeMe123!
+      SEED_EMAIL: 'owner@example.com'
+      SEED_PASSWORD: 'ChangeMe123!'
       DATABASE_URL: mysql://gymuser:dev@127.0.0.1:3306/gymdb
       JWT_SECRET: ci-jwt-secret-value-that-is-definitely-long-enough-for-tests
       COOKIE_SECRET: ci-cookie-secret-value-that-is-definitely-long-enough-for-tests
@@ -60,7 +60,7 @@ jobs:
       VITE_API_BASE_URL: http://localhost:8080
       PORT: 8080
       ENV: test
-      LOG_LEVEL: warn
+      LOG_LEVEL: info
     services:
       # MySQL 8.0 (not 8.4): keeps mysql_native_password loaded by default.
       # GitHub Actions services can't easily set `command` args to enable it on 8.4.
@@ -121,6 +121,23 @@ jobs:
       - name: Seed owner user
         working-directory: backend-fastify
         run: node dist/scripts/seed.js
+
+      - name: Smoke-test login via API
+        run: |
+          echo "Trying login with seeded credentials..."
+          RESP=$(curl -sS -o /tmp/login.json -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -H "Origin: http://localhost:5173" \
+            -X POST http://localhost:8080/api/v1/auth/login \
+            --data "{\"email\":\"${SEED_EMAIL}\",\"password\":\"${SEED_PASSWORD}\"}")
+          echo "status: $RESP"
+          echo "body:"
+          cat /tmp/login.json
+          echo
+          if [ "$RESP" != "200" ]; then
+            echo "LOGIN FAILED — backend rejected seeded credentials"
+            exit 1
+          fi
 
       - name: Install frontend deps
         working-directory: frontend
