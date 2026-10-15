@@ -7,8 +7,8 @@ test('login with valid credentials lands on dashboard', async ({ page }) => {
 
 test('login with invalid credentials shows an error', async ({ page }) => {
   await page.goto('/login')
-  await page.getByLabel('Email').fill(SEED_EMAIL)
-  await page.getByLabel('Password', { exact: true }).fill('wrong-password')
+  await page.locator('#email').fill(SEED_EMAIL)
+  await page.locator('#password').fill('wrong-password')
   await page.getByRole('button', { name: 'Sign In' }).click()
   await expect(page.getByText(/invalid email or password/i)).toBeVisible()
   await expect(page).toHaveURL(/\/login/)
