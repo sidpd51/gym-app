@@ -1,0 +1,30 @@
+# Dev-only: just MySQL. Run backend + frontend locally.
+#   docker compose -f docker-compose.dev.yml up
+#
+# Backend: cd backend-fastify && npm run dev   (port 8080)
+# Frontend: cd frontend && npm run dev          (port 5173)
+services:
+  db:
+    image: mysql:8.4
+    container_name: gym-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: gymdb
+      MYSQL_USER: gymuser
+      MYSQL_PASSWORD: dev
+      MYSQL_ROOT_PASSWORD: dev-root
+      TZ: Asia/Kolkata
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00", "--mysql-native-password=ON"]
+    ports:
+      - "3306:3306"
+    volumes:
+      - gym-mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pdev-root --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  gym-mysql-data:
