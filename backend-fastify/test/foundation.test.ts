@@ -93,8 +93,8 @@ describe('auth + csrf + users + members', () => {
     expect((await client.delete(`/members/${id}`)).status).toBe(204);
     expect((await client.get(`/members/${id}`)).status).toBe(404);
 
-    const audit = await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='MEMBER' ORDER BY timestamp");
-    expect(audit.rows.map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DELETE']);
+    const [audit] = await env.pool.query("SELECT action FROM audit_logs WHERE entity_type='MEMBER' ORDER BY timestamp");
+    expect((audit as Array<{ action: string }>).map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DELETE']);
   });
 
   it('user management + profile password change', async () => {
