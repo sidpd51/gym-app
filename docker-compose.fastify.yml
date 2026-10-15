@@ -26,6 +26,7 @@ services:
       - "3306:3306"
     volumes:
       - gym-mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pdev-root --silent"]
       interval: 5s
@@ -62,7 +63,7 @@ services:
     restart: unless-stopped
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "3000:80"
 
