@@ -54,8 +54,8 @@ export interface UpdateTrainerInput {
 }
 
 export interface TrainerRepository {
-  list(query?: TrainerListQuery): Promise<PaginatedResponse<Trainer>>
-  getById(id: string): Promise<Trainer>
+  list(query?: TrainerListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Trainer>>
+  getById(id: string, signal?: AbortSignal): Promise<Trainer>
   create(input: CreateTrainerInput): Promise<Trainer>
   update(id: string, input: UpdateTrainerInput): Promise<Trainer>
   remove(id: string): Promise<void>
@@ -70,10 +70,11 @@ function toQuery(query?: TrainerListQuery): ListQueryParams {
 }
 
 export const apiTrainerRepository: TrainerRepository = {
-  async list(query?: TrainerListQuery): Promise<PaginatedResponse<Trainer>> {
+  async list(query?: TrainerListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Trainer>> {
     const res = await apiClient.get<PaginatedResponse<BackendTrainer>>(
       '/api/v1/trainers',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -81,8 +82,8 @@ export const apiTrainerRepository: TrainerRepository = {
     }
   },
 
-  async getById(id: string): Promise<Trainer> {
-    const res = await apiClient.get<BackendTrainer>(`/api/v1/trainers/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<Trainer> {
+    const res = await apiClient.get<BackendTrainer>(`/api/v1/trainers/${id}`, undefined, { signal })
     return mapBackendTrainer(res)
   },
 

@@ -135,12 +135,12 @@ export interface RecordMaintenanceInput {
 }
 
 export interface EquipmentRepository {
-  list(query?: EquipmentListQuery): Promise<PaginatedResponse<Equipment>>
-  getById(id: string): Promise<Equipment>
+  list(query?: EquipmentListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Equipment>>
+  getById(id: string, signal?: AbortSignal): Promise<Equipment>
   create(input: CreateEquipmentInput): Promise<Equipment>
   update(id: string, input: UpdateEquipmentInput): Promise<Equipment>
   remove(id: string): Promise<void>
-  listMaintenanceByEquipmentId(equipmentId: string): Promise<EquipmentMaintenance[]>
+  listMaintenanceByEquipmentId(equipmentId: string, signal?: AbortSignal): Promise<EquipmentMaintenance[]>
   recordMaintenance(
     equipmentId: string,
     input: RecordMaintenanceInput,
@@ -148,7 +148,7 @@ export interface EquipmentRepository {
 }
 
 export interface EquipmentCategoryRepository {
-  list(): Promise<EquipmentCategory[]>
+  list(signal?: AbortSignal): Promise<EquipmentCategory[]>
   create(input: {
     name: string
     description?: string
@@ -171,10 +171,11 @@ function toQuery(query?: EquipmentListQuery): ListQueryParams {
 }
 
 export const apiEquipmentRepository: EquipmentRepository = {
-  async list(query?: EquipmentListQuery): Promise<PaginatedResponse<Equipment>> {
+  async list(query?: EquipmentListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Equipment>> {
     const res = await apiClient.get<PaginatedResponse<BackendEquipment>>(
       '/api/v1/equipment',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -182,8 +183,8 @@ export const apiEquipmentRepository: EquipmentRepository = {
     }
   },
 
-  async getById(id: string): Promise<Equipment> {
-    const res = await apiClient.get<BackendEquipment>(`/api/v1/equipment/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<Equipment> {
+    const res = await apiClient.get<BackendEquipment>(`/api/v1/equipment/${id}`, undefined, { signal })
     return mapBackendEquipment(res)
   },
 
@@ -212,9 +213,11 @@ export const apiEquipmentRepository: EquipmentRepository = {
     await apiClient.delete<void>(`/api/v1/equipment/${id}`)
   },
 
-  async listMaintenanceByEquipmentId(equipmentId: string): Promise<EquipmentMaintenance[]> {
+  async listMaintenanceByEquipmentId(equipmentId: string, signal?: AbortSignal): Promise<EquipmentMaintenance[]> {
     const res = await apiClient.get<BackendMaintenance[]>(
       `/api/v1/equipment/${equipmentId}/maintenance`,
+      undefined,
+      { signal },
     )
     return res.map(mapBackendMaintenance)
   },
@@ -240,8 +243,8 @@ export const apiEquipmentRepository: EquipmentRepository = {
 }
 
 export const apiEquipmentCategoryRepository: EquipmentCategoryRepository = {
-  async list(): Promise<EquipmentCategory[]> {
-    const res = await apiClient.get<BackendEquipmentCategory[]>('/api/v1/equipment-categories')
+  async list(signal?: AbortSignal): Promise<EquipmentCategory[]> {
+    const res = await apiClient.get<BackendEquipmentCategory[]>('/api/v1/equipment-categories', undefined, { signal })
     return res.map(mapBackendCategory)
   },
 

@@ -22,8 +22,8 @@ export function useLeads(query?: LeadListQuery): LeadsResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<Lead>(normalized, (q) =>
-    leadRepository.list(q as LeadListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<Lead>(normalized, (q, signal) =>
+    leadRepository.list(q as LeadListQuery, signal),
   )
   return { leads: data ?? [], meta, isLoading, error, refetch }
 }
@@ -37,8 +37,8 @@ interface LeadResult {
 
 /** Async lead detail backed by GET /api/v1/leads/{id}. */
 export function useLead(id: string | undefined): LeadResult {
-  const { data, isLoading, error, refetch } = useApiDetail<Lead>(id, (leadId) =>
-    leadRepository.getById(leadId),
+  const { data, isLoading, error, refetch } = useApiDetail<Lead>(id, (leadId, signal) =>
+    leadRepository.getById(leadId, signal),
   )
   return { lead: data, isLoading, error, refetch }
 }

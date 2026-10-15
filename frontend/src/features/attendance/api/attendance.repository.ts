@@ -32,7 +32,7 @@ export interface AttendanceListQuery extends ListQueryParams {
 }
 
 export interface AttendanceRepository {
-  list(query?: AttendanceListQuery): Promise<PaginatedResponse<Attendance>>
+  list(query?: AttendanceListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Attendance>>
   mark(memberId: string): Promise<Attendance>
 }
 
@@ -47,10 +47,11 @@ function toQuery(query?: AttendanceListQuery): ListQueryParams {
 }
 
 export const apiAttendanceRepository: AttendanceRepository = {
-  async list(query?: AttendanceListQuery): Promise<PaginatedResponse<Attendance>> {
+  async list(query?: AttendanceListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Attendance>> {
     const res = await apiClient.get<PaginatedResponse<BackendAttendance>>(
       '/api/v1/attendance',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,

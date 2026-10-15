@@ -77,15 +77,15 @@ export interface UpdateExpenseInput {
 }
 
 export interface ExpenseRepository {
-  list(query?: ExpenseListQuery): Promise<PaginatedResponse<Expense>>
-  getById(id: string): Promise<Expense>
+  list(query?: ExpenseListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Expense>>
+  getById(id: string, signal?: AbortSignal): Promise<Expense>
   create(input: CreateExpenseInput): Promise<Expense>
   update(id: string, input: UpdateExpenseInput): Promise<Expense>
   remove(id: string): Promise<void>
 }
 
 export interface ExpenseCategoryRepository {
-  list(): Promise<ExpenseCategory[]>
+  list(signal?: AbortSignal): Promise<ExpenseCategory[]>
   create(input: { name: string; description?: string; status?: 'ACTIVE' | 'INACTIVE' }): Promise<ExpenseCategory>
   update(
     id: string,
@@ -105,10 +105,11 @@ function toQuery(query?: ExpenseListQuery): ListQueryParams {
 }
 
 export const apiExpenseRepository: ExpenseRepository = {
-  async list(query?: ExpenseListQuery): Promise<PaginatedResponse<Expense>> {
+  async list(query?: ExpenseListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Expense>> {
     const res = await apiClient.get<PaginatedResponse<BackendExpense>>(
       '/api/v1/expenses',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -116,8 +117,8 @@ export const apiExpenseRepository: ExpenseRepository = {
     }
   },
 
-  async getById(id: string): Promise<Expense> {
-    const res = await apiClient.get<BackendExpense>(`/api/v1/expenses/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<Expense> {
+    const res = await apiClient.get<BackendExpense>(`/api/v1/expenses/${id}`, undefined, { signal })
     return mapBackendExpense(res)
   },
 
@@ -145,8 +146,8 @@ export const apiExpenseRepository: ExpenseRepository = {
 }
 
 export const apiExpenseCategoryRepository: ExpenseCategoryRepository = {
-  async list(): Promise<ExpenseCategory[]> {
-    const res = await apiClient.get<BackendExpenseCategory[]>('/api/v1/expense-categories')
+  async list(signal?: AbortSignal): Promise<ExpenseCategory[]> {
+    const res = await apiClient.get<BackendExpenseCategory[]>('/api/v1/expense-categories', undefined, { signal })
     return res.map(mapBackendCategory)
   },
 

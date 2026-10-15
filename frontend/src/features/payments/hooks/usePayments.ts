@@ -22,8 +22,8 @@ export function usePayments(query?: PaymentListQuery): PaymentsResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<Payment>(normalized, (q) =>
-    paymentRepository.list(q as PaymentListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<Payment>(normalized, (q, signal) =>
+    paymentRepository.list(q as PaymentListQuery, signal),
   )
   return { payments: data ?? [], meta, isLoading, error, refetch }
 }
@@ -37,8 +37,8 @@ interface PaymentResult {
 
 /** Async payment detail backed by GET /api/v1/payments/{id}. */
 export function usePayment(id: string | undefined): PaymentResult {
-  const { data, isLoading, error, refetch } = useApiDetail<Payment>(id, (paymentId) =>
-    paymentRepository.getById(paymentId),
+  const { data, isLoading, error, refetch } = useApiDetail<Payment>(id, (paymentId, signal) =>
+    paymentRepository.getById(paymentId, signal),
   )
   return { payment: data, isLoading, error, refetch }
 }
@@ -53,7 +53,7 @@ interface MemberPaymentsResult {
 /** Async member-scoped payment list backed by GET /api/v1/payments?memberId=. */
 export function useMemberPayments(memberId: string | undefined): MemberPaymentsResult {
   const { data, isLoading, error, refetch } = useApiQuery<Payment[]>(
-    () => paymentRepository.listByMemberId(memberId!),
+    (signal) => paymentRepository.listByMemberId(memberId!, signal),
     memberId ?? '',
   )
   return { payments: data ?? [], isLoading, error, refetch }

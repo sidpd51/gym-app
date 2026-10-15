@@ -11,6 +11,8 @@ interface RequestOptions {
   headers?: Record<string, string>
   /** Skip CSRF for login/logout which live outside the CSRF middleware. */
   skipCsrf?: boolean
+  /** AbortSignal to cancel the in-flight request. */
+  signal?: AbortSignal
 }
 
 const UNSAFE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE'])
@@ -83,6 +85,7 @@ async function request<T>(method: string, path: string, options?: RequestOptions
       headers,
       credentials: 'include',
       body: hasBody ? JSON.stringify(options?.body) : undefined,
+      signal: options?.signal,
     })
   } catch (err) {
     throw normalizeError(err)
@@ -98,6 +101,7 @@ async function request<T>(method: string, path: string, options?: RequestOptions
           headers: { ...headers, 'X-CSRF-Token': token },
           credentials: 'include',
           body: hasBody ? JSON.stringify(options?.body) : undefined,
+          signal: options?.signal,
         })
       } catch (err) {
         throw normalizeError(err)

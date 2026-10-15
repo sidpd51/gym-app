@@ -22,8 +22,8 @@ export function useMembershipPlans(query?: PlanListQuery): PlansResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<MembershipPlan>(normalized, (q) =>
-    membershipPlanRepository.list(q as PlanListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<MembershipPlan>(normalized, (q, signal) =>
+    membershipPlanRepository.list(q as PlanListQuery, signal),
   )
   return { plans: data ?? [], meta, isLoading, error, refetch }
 }
@@ -37,8 +37,8 @@ interface PlanResult {
 
 /** Async plan detail backed by GET /api/v1/membership-plans/{id}. */
 export function useMembershipPlan(id: string | undefined): PlanResult {
-  const { data, isLoading, error, refetch } = useApiDetail<MembershipPlan>(id, (planId) =>
-    membershipPlanRepository.getById(planId),
+  const { data, isLoading, error, refetch } = useApiDetail<MembershipPlan>(id, (planId, signal) =>
+    membershipPlanRepository.getById(planId, signal),
   )
   return { plan: data, isLoading, error, refetch }
 }

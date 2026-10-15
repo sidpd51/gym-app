@@ -23,8 +23,8 @@ export function useAttendance(query?: AttendanceListQuery): AttendanceResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<Attendance>(normalized, (q) =>
-    attendanceRepository.list(q as AttendanceListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<Attendance>(normalized, (q, signal) =>
+    attendanceRepository.list(q as AttendanceListQuery, signal),
   )
   return { attendance: data ?? [], meta, isLoading, error, refetch }
 }

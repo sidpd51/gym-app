@@ -22,8 +22,8 @@ export function useTrainers(query?: TrainerListQuery): TrainersResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<Trainer>(normalized, (q) =>
-    trainerRepository.list(q as TrainerListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<Trainer>(normalized, (q, signal) =>
+    trainerRepository.list(q as TrainerListQuery, signal),
   )
   return { trainers: data ?? [], meta, isLoading, error, refetch }
 }
@@ -37,8 +37,8 @@ interface TrainerResult {
 
 /** Async trainer detail backed by GET /api/v1/trainers/{id}. */
 export function useTrainer(id: string | undefined): TrainerResult {
-  const { data, isLoading, error, refetch } = useApiDetail<Trainer>(id, (trainerId) =>
-    trainerRepository.getById(trainerId),
+  const { data, isLoading, error, refetch } = useApiDetail<Trainer>(id, (trainerId, signal) =>
+    trainerRepository.getById(trainerId, signal),
   )
   return { trainer: data, isLoading, error, refetch }
 }

@@ -22,8 +22,8 @@ export function useMemberships(query?: MembershipListQuery): MembershipsResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<Membership>(normalized, (q) =>
-    membershipRepository.list(q as MembershipListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<Membership>(normalized, (q, signal) =>
+    membershipRepository.list(q as MembershipListQuery, signal),
   )
   return { memberships: data ?? [], meta, isLoading, error, refetch }
 }
@@ -37,8 +37,8 @@ interface MembershipResult {
 
 /** Async membership detail backed by GET /api/v1/memberships/{id}. */
 export function useMembership(id: string | undefined): MembershipResult {
-  const { data, isLoading, error, refetch } = useApiDetail<Membership>(id, (membershipId) =>
-    membershipRepository.getById(membershipId),
+  const { data, isLoading, error, refetch } = useApiDetail<Membership>(id, (membershipId, signal) =>
+    membershipRepository.getById(membershipId, signal),
   )
   return { membership: data, isLoading, error, refetch }
 }
@@ -56,7 +56,7 @@ interface MemberMembershipsResult {
  */
 export function useMemberMemberships(memberId: string | undefined): MemberMembershipsResult {
   const { data, isLoading, error, refetch } = useApiQuery<Membership[]>(
-    () => membershipRepository.listByMemberId(memberId!),
+    (signal) => membershipRepository.listByMemberId(memberId!, signal),
     memberId ?? '',
   )
   return { memberships: data ?? [], isLoading, error, refetch }

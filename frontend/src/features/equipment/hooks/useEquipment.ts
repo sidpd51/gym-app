@@ -32,7 +32,7 @@ export function useEquipment(query?: EquipmentListQuery): EquipmentListResult {
   }
   const { data, meta, isLoading, error, refetch } = useApiList<Equipment>(
     normalized,
-    (q) => equipmentRepository.list(q as EquipmentListQuery),
+    (q, signal) => equipmentRepository.list(q as EquipmentListQuery, signal),
   )
   return { equipment: data ?? [], meta, isLoading, error, refetch }
 }
@@ -46,8 +46,8 @@ interface EquipmentItemResult {
 
 /** Async equipment detail backed by GET /api/v1/equipment/{id}. */
 export function useEquipmentItem(id: string | undefined): EquipmentItemResult {
-  const { data, isLoading, error, refetch } = useApiDetail<Equipment>(id, (itemId) =>
-    equipmentRepository.getById(itemId),
+  const { data, isLoading, error, refetch } = useApiDetail<Equipment>(id, (itemId, signal) =>
+    equipmentRepository.getById(itemId, signal),
   )
   return { item: data, isLoading, error, refetch }
 }
@@ -65,7 +65,7 @@ interface EquipmentCategoriesResult {
  */
 export function useEquipmentCategories(): EquipmentCategoriesResult {
   const { data, isLoading, error, refetch } = useApiQuery<EquipmentCategory[]>(
-    () => equipmentCategoryRepository.list(),
+    (signal) => equipmentCategoryRepository.list(signal),
     'equipment-categories',
   )
   return { categories: data ?? [], isLoading, error, refetch }
@@ -86,9 +86,9 @@ export function useEquipmentMaintenance(
   equipmentId: string | undefined,
 ): EquipmentMaintenanceResult {
   const { data, isLoading, error, refetch } = useApiQuery<EquipmentMaintenance[]>(
-    () =>
+    (signal) =>
       equipmentId
-        ? equipmentRepository.listMaintenanceByEquipmentId(equipmentId)
+        ? equipmentRepository.listMaintenanceByEquipmentId(equipmentId, signal)
         : Promise.resolve([]),
     `equipment-maintenance-${equipmentId ?? 'none'}`,
   )

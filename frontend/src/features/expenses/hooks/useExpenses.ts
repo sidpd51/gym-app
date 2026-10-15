@@ -26,8 +26,8 @@ export function useExpenses(query?: ExpenseListQuery): ExpensesResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<Expense>(normalized, (q) =>
-    expenseRepository.list(q as ExpenseListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<Expense>(normalized, (q, signal) =>
+    expenseRepository.list(q as ExpenseListQuery, signal),
   )
   return { expenses: data ?? [], meta, isLoading, error, refetch }
 }
@@ -41,8 +41,8 @@ interface ExpenseResult {
 
 /** Async expense detail backed by GET /api/v1/expenses/{id}. */
 export function useExpense(id: string | undefined): ExpenseResult {
-  const { data, isLoading, error, refetch } = useApiDetail<Expense>(id, (expenseId) =>
-    expenseRepository.getById(expenseId),
+  const { data, isLoading, error, refetch } = useApiDetail<Expense>(id, (expenseId, signal) =>
+    expenseRepository.getById(expenseId, signal),
   )
   return { expense: data, isLoading, error, refetch }
 }
@@ -60,7 +60,7 @@ interface ExpenseCategoriesResult {
  */
 export function useExpenseCategories(): ExpenseCategoriesResult {
   const { data, isLoading, error, refetch } = useApiQuery<ExpenseCategory[]>(
-    () => expenseCategoryRepository.list(),
+    (signal) => expenseCategoryRepository.list(signal),
     '',
   )
   return { categories: data ?? [], isLoading, error, refetch }

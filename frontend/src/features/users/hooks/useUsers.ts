@@ -23,8 +23,8 @@ export function useUsers(query?: UserListQuery): UsersResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<User>(normalized, (q) =>
-    userRepository.list(q as UserListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<User>(normalized, (q, signal) =>
+    userRepository.list(q as UserListQuery, signal),
   )
   return { users: data ?? [], meta, isLoading, error, refetch }
 }
@@ -38,8 +38,8 @@ interface UserResult {
 
 /** Async user detail backed by GET /api/v1/users/{id}. */
 export function useUser(id: string | undefined): UserResult {
-  const { data, isLoading, error, refetch } = useApiDetail<User>(id, (userId) =>
-    userRepository.getById(userId),
+  const { data, isLoading, error, refetch } = useApiDetail<User>(id, (userId, signal) =>
+    userRepository.getById(userId, signal),
   )
   return { user: data, isLoading, error, refetch }
 }

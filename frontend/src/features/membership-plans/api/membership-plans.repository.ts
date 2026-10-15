@@ -48,8 +48,8 @@ export interface UpdatePlanInput {
 }
 
 export interface MembershipPlanRepository {
-  list(query?: PlanListQuery): Promise<PaginatedResponse<MembershipPlan>>
-  getById(id: string): Promise<MembershipPlan>
+  list(query?: PlanListQuery, signal?: AbortSignal): Promise<PaginatedResponse<MembershipPlan>>
+  getById(id: string, signal?: AbortSignal): Promise<MembershipPlan>
   create(input: CreatePlanInput): Promise<MembershipPlan>
   update(id: string, input: UpdatePlanInput): Promise<MembershipPlan>
   remove(id: string): Promise<void>
@@ -65,10 +65,11 @@ function toQuery(query?: PlanListQuery): ListQueryParams {
 }
 
 export const apiMembershipPlanRepository: MembershipPlanRepository = {
-  async list(query?: PlanListQuery): Promise<PaginatedResponse<MembershipPlan>> {
+  async list(query?: PlanListQuery, signal?: AbortSignal): Promise<PaginatedResponse<MembershipPlan>> {
     const res = await apiClient.get<PaginatedResponse<BackendPlan>>(
       '/api/v1/membership-plans',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -76,8 +77,8 @@ export const apiMembershipPlanRepository: MembershipPlanRepository = {
     }
   },
 
-  async getById(id: string): Promise<MembershipPlan> {
-    const res = await apiClient.get<BackendPlan>(`/api/v1/membership-plans/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<MembershipPlan> {
+    const res = await apiClient.get<BackendPlan>(`/api/v1/membership-plans/${id}`, undefined, { signal })
     return mapBackendPlan(res)
   },
 

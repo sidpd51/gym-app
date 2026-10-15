@@ -28,7 +28,7 @@ export function useInventory(query?: InventoryListQuery): InventoryResult {
   }
   const { data, meta, isLoading, error, refetch } = useApiList<InventoryItem>(
     normalized,
-    (q) => inventoryRepository.list(q as InventoryListQuery),
+    (q, signal) => inventoryRepository.list(q as InventoryListQuery, signal),
   )
   return { items: data ?? [], meta, isLoading, error, refetch }
 }
@@ -42,8 +42,8 @@ interface InventoryItemResult {
 
 /** Async item detail backed by GET /api/v1/inventory/{id}. */
 export function useInventoryItem(id: string | undefined): InventoryItemResult {
-  const { data, isLoading, error, refetch } = useApiDetail<InventoryItem>(id, (itemId) =>
-    inventoryRepository.getById(itemId),
+  const { data, isLoading, error, refetch } = useApiDetail<InventoryItem>(id, (itemId, signal) =>
+    inventoryRepository.getById(itemId, signal),
   )
   return { item: data, isLoading, error, refetch }
 }
@@ -61,7 +61,7 @@ interface InventoryCategoriesResult {
  */
 export function useInventoryCategories(): InventoryCategoriesResult {
   const { data, isLoading, error, refetch } = useApiQuery<InventoryCategory[]>(
-    () => inventoryCategoryRepository.list(),
+    (signal) => inventoryCategoryRepository.list(signal),
     'inventory-categories',
   )
   return { categories: data ?? [], isLoading, error, refetch }
@@ -80,7 +80,7 @@ interface InventoryTransactionsResult {
  */
 export function useInventoryTransactions(itemId: string | undefined): InventoryTransactionsResult {
   const { data, isLoading, error, refetch } = useApiQuery<InventoryTransaction[]>(
-    () => (itemId ? inventoryRepository.listTransactionsByItemId(itemId) : Promise.resolve([])),
+    (signal) => (itemId ? inventoryRepository.listTransactionsByItemId(itemId, signal) : Promise.resolve([])),
     `inventory-transactions-${itemId ?? 'none'}`,
   )
   return { transactions: data ?? [], isLoading, error, refetch }

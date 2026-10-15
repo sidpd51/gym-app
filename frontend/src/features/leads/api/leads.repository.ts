@@ -72,8 +72,8 @@ export interface ConvertLeadInput {
 }
 
 export interface LeadRepository {
-  list(query?: LeadListQuery): Promise<PaginatedResponse<Lead>>
-  getById(id: string): Promise<Lead>
+  list(query?: LeadListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Lead>>
+  getById(id: string, signal?: AbortSignal): Promise<Lead>
   create(input: CreateLeadInput): Promise<Lead>
   update(id: string, input: UpdateLeadInput): Promise<Lead>
   remove(id: string): Promise<void>
@@ -90,16 +90,16 @@ function toQuery(query?: LeadListQuery): ListQueryParams {
 }
 
 export const apiLeadRepository: LeadRepository = {
-  async list(query?: LeadListQuery): Promise<PaginatedResponse<Lead>> {
-    const res = await apiClient.get<PaginatedResponse<BackendLead>>('/api/v1/leads', toQuery(query))
+  async list(query?: LeadListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Lead>> {
+    const res = await apiClient.get<PaginatedResponse<BackendLead>>('/api/v1/leads', toQuery(query), { signal })
     return {
       meta: res.meta,
       data: res.data.map(mapBackendLead),
     }
   },
 
-  async getById(id: string): Promise<Lead> {
-    const res = await apiClient.get<BackendLead>(`/api/v1/leads/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<Lead> {
+    const res = await apiClient.get<BackendLead>(`/api/v1/leads/${id}`, undefined, { signal })
     return mapBackendLead(res)
   },
 

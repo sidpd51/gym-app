@@ -56,8 +56,8 @@ export interface UpdateUserInput {
 }
 
 export interface UserRepository {
-  list(query?: UserListQuery): Promise<PaginatedResponse<User>>
-  getById(id: string): Promise<User>
+  list(query?: UserListQuery, signal?: AbortSignal): Promise<PaginatedResponse<User>>
+  getById(id: string, signal?: AbortSignal): Promise<User>
   create(input: CreateUserInput): Promise<User>
   update(id: string, input: UpdateUserInput): Promise<User>
   remove(id: string): Promise<void>
@@ -74,16 +74,16 @@ function toQuery(query?: UserListQuery): ListQueryParams {
 }
 
 export const apiUserRepository: UserRepository = {
-  async list(query?: UserListQuery): Promise<PaginatedResponse<User>> {
-    const res = await apiClient.get<PaginatedResponse<BackendUser>>('/api/v1/users', toQuery(query))
+  async list(query?: UserListQuery, signal?: AbortSignal): Promise<PaginatedResponse<User>> {
+    const res = await apiClient.get<PaginatedResponse<BackendUser>>('/api/v1/users', toQuery(query), { signal })
     return {
       meta: res.meta,
       data: res.data.map(mapBackendUser),
     }
   },
 
-  async getById(id: string): Promise<User> {
-    const res = await apiClient.get<BackendUser>(`/api/v1/users/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<User> {
+    const res = await apiClient.get<BackendUser>(`/api/v1/users/${id}`, undefined, { signal })
     return mapBackendUser(res)
   },
 

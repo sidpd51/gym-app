@@ -27,7 +27,7 @@ function toApiError(err: unknown): ApiError {
 }
 
 /** Generic async query: runs fetcher on mount + when depsKey changes. */
-export function useApiQuery<T>(fetcher: () => Promise<T>, depsKey = ''): AsyncState<T> {
+export function useApiQuery<T>(fetcher: (signal: AbortSignal) => Promise<T>, depsKey = ''): AsyncState<T> {
   const [data, setData] = useState<T | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<ApiError | null>(null)
@@ -39,20 +39,25 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, depsKey = ''): AsyncSt
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
     setIsLoading(true)
     setError(null)
-    fetcher()
+    fetcher(controller.signal)
       .then((result) => {
         if (active) setData(result)
       })
       .catch((err: unknown) => {
-        if (active) setError(toApiError(err))
+        if (!active) return
+        const e = err instanceof Error ? err : null
+        if (e?.name === 'AbortError') return
+        setError(toApiError(err))
       })
       .finally(() => {
         if (active) setIsLoading(false)
       })
     return () => {
       active = false
+      controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [depsKey, nonce])
@@ -67,11 +72,11 @@ interface PaginatedState<T> extends AsyncState<T[]> {
 /** Standard list hook for backend PageResponse<T> = { data, meta }. */
 export function useApiList<T>(
   query: ListQueryParams,
-  fetcher: (query: ListQueryParams) => Promise<PaginatedResponse<T>>,
+  fetcher: (query: ListQueryParams, signal: AbortSignal) => Promise<PaginatedResponse<T>>,
 ): PaginatedState<T> {
   const depsKey = JSON.stringify(query)
   const { data, isLoading, error, refetch } = useApiQuery(
-    () => fetcher(query),
+    (signal) => fetcher(query, signal),
     depsKey,
   )
   return {
@@ -84,7 +89,7 @@ export function useApiList<T>(
 }
 
 /** Standard detail hook for GET by id. Skips fetch when id is undefined. */
-export function useApiDetail<T>(id: string | undefined, fetcher: (id: string) => Promise<T>): AsyncState<T> {
+export function useApiDetail<T>(id: string | undefined, fetcher: (id: string, signal: AbortSignal) => Promise<T>): AsyncState<T> {
   const [data, setData] = useState<T | null>(null)
   const [isLoading, setIsLoading] = useState(!!id)
   const [error, setError] = useState<ApiError | null>(null)
@@ -101,20 +106,25 @@ export function useApiDetail<T>(id: string | undefined, fetcher: (id: string) =>
       return
     }
     let active = true
+    const controller = new AbortController()
     setIsLoading(true)
     setError(null)
-    fetcher(id)
+    fetcher(id, controller.signal)
       .then((result) => {
         if (active) setData(result)
       })
       .catch((err: unknown) => {
-        if (active) setError(toApiError(err))
+        if (!active) return
+        const e = err instanceof Error ? err : null
+        if (e?.name === 'AbortError') return
+        setError(toApiError(err))
       })
       .finally(() => {
         if (active) setIsLoading(false)
       })
     return () => {
       active = false
+      controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, nonce])

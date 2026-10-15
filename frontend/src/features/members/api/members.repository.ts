@@ -88,9 +88,9 @@ export interface UpdateMemberInput {
 }
 
 export interface MemberRepository {
-  list(query?: MemberListQuery): Promise<PaginatedResponse<Member>>
-  getById(id: string): Promise<Member>
-  getDetails(id: string): Promise<{
+  list(query?: MemberListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Member>>
+  getById(id: string, signal?: AbortSignal): Promise<Member>
+  getDetails(id: string, signal?: AbortSignal): Promise<{
     member: Member
     details: BackendMemberDetails
   }>
@@ -109,10 +109,11 @@ function toQuery(query?: MemberListQuery): ListQueryParams {
 }
 
 export const apiMemberRepository: MemberRepository = {
-  async list(query?: MemberListQuery): Promise<PaginatedResponse<Member>> {
+  async list(query?: MemberListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Member>> {
     const res = await apiClient.get<PaginatedResponse<BackendMember>>(
       '/api/v1/members',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -120,14 +121,16 @@ export const apiMemberRepository: MemberRepository = {
     }
   },
 
-  async getById(id: string): Promise<Member> {
-    const res = await apiClient.get<BackendMember>(`/api/v1/members/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<Member> {
+    const res = await apiClient.get<BackendMember>(`/api/v1/members/${id}`, undefined, { signal })
     return mapBackendMember(res)
   },
 
-  async getDetails(id: string) {
+  async getDetails(id: string, signal?: AbortSignal) {
     const res = await apiClient.get<BackendMemberDetails>(
       `/api/v1/members/${id}/details`,
+      undefined,
+      { signal },
     )
     return { member: mapBackendMember(res.member), details: res }
   },

@@ -51,9 +51,9 @@ export interface CreatePaymentInput {
 }
 
 export interface PaymentRepository {
-  list(query?: PaymentListQuery): Promise<PaginatedResponse<Payment>>
-  getById(id: string): Promise<Payment>
-  listByMemberId(memberId: string): Promise<Payment[]>
+  list(query?: PaymentListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Payment>>
+  getById(id: string, signal?: AbortSignal): Promise<Payment>
+  listByMemberId(memberId: string, signal?: AbortSignal): Promise<Payment[]>
   create(input: CreatePaymentInput): Promise<Payment>
 }
 
@@ -69,10 +69,11 @@ function toQuery(query?: PaymentListQuery): ListQueryParams {
 }
 
 export const apiPaymentRepository: PaymentRepository = {
-  async list(query?: PaymentListQuery): Promise<PaginatedResponse<Payment>> {
+  async list(query?: PaymentListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Payment>> {
     const res = await apiClient.get<PaginatedResponse<BackendPayment>>(
       '/api/v1/payments',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -80,17 +81,17 @@ export const apiPaymentRepository: PaymentRepository = {
     }
   },
 
-  async getById(id: string): Promise<Payment> {
-    const res = await apiClient.get<BackendPayment>(`/api/v1/payments/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<Payment> {
+    const res = await apiClient.get<BackendPayment>(`/api/v1/payments/${id}`, undefined, { signal })
     return mapBackendPayment(res)
   },
 
-  async listByMemberId(memberId: string): Promise<Payment[]> {
+  async listByMemberId(memberId: string, signal?: AbortSignal): Promise<Payment[]> {
     const res = await apiClient.get<PaginatedResponse<BackendPayment>>('/api/v1/payments', {
       page: 1,
       pageSize: 100,
       memberId,
-    })
+    }, { signal })
     return res.data.map(mapBackendPayment)
   },
 

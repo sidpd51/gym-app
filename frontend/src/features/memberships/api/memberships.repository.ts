@@ -42,9 +42,9 @@ export interface CreateMembershipInput {
 }
 
 export interface MembershipRepository {
-  list(query?: MembershipListQuery): Promise<PaginatedResponse<Membership>>
-  getById(id: string): Promise<Membership>
-  listByMemberId(memberId: string): Promise<Membership[]>
+  list(query?: MembershipListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Membership>>
+  getById(id: string, signal?: AbortSignal): Promise<Membership>
+  listByMemberId(memberId: string, signal?: AbortSignal): Promise<Membership[]>
   create(input: CreateMembershipInput): Promise<Membership>
 }
 
@@ -58,10 +58,11 @@ function toQuery(query?: MembershipListQuery): ListQueryParams {
 }
 
 export const apiMembershipRepository: MembershipRepository = {
-  async list(query?: MembershipListQuery): Promise<PaginatedResponse<Membership>> {
+  async list(query?: MembershipListQuery, signal?: AbortSignal): Promise<PaginatedResponse<Membership>> {
     const res = await apiClient.get<PaginatedResponse<BackendMembership>>(
       '/api/v1/memberships',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -69,15 +70,16 @@ export const apiMembershipRepository: MembershipRepository = {
     }
   },
 
-  async getById(id: string): Promise<Membership> {
-    const res = await apiClient.get<BackendMembership>(`/api/v1/memberships/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<Membership> {
+    const res = await apiClient.get<BackendMembership>(`/api/v1/memberships/${id}`, undefined, { signal })
     return mapBackendMembership(res)
   },
 
-  async listByMemberId(memberId: string): Promise<Membership[]> {
+  async listByMemberId(memberId: string, signal?: AbortSignal): Promise<Membership[]> {
     const res = await apiClient.get<PaginatedResponse<BackendMembership>>(
       '/api/v1/memberships',
       { page: 1, pageSize: 100, memberId },
+      { signal },
     )
     return res.data.map(mapBackendMembership)
   },

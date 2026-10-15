@@ -22,8 +22,8 @@ export function useMembers(query?: MemberListQuery): MembersResult {
     pageSize: 100,
     ...query,
   }
-  const { data, meta, isLoading, error, refetch } = useApiList<Member>(normalized, (q) =>
-    memberRepository.list(q as MemberListQuery),
+  const { data, meta, isLoading, error, refetch } = useApiList<Member>(normalized, (q, signal) =>
+    memberRepository.list(q as MemberListQuery, signal),
   )
   return { members: data ?? [], meta, isLoading, error, refetch }
 }
@@ -51,7 +51,7 @@ export function useMember(id: string | undefined): MemberResult {
       attendanceHistory: unknown[]
       activeTrainer: unknown
     }
-  }>(id, (memberId) => memberRepository.getDetails(memberId))
+  }>(id, (memberId, signal) => memberRepository.getDetails(memberId, signal))
 
   const supplementalData: MemberSupplementalData | null = data
     ? {

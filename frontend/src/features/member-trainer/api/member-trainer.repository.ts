@@ -29,16 +29,16 @@ export function mapBackendAssignment(payload: BackendAssignment): MemberTrainerA
 }
 
 export interface MemberTrainerRepository {
-  listByMemberId(memberId: string): Promise<MemberTrainerAssignment[]>
-  getCurrentForMember(memberId: string): Promise<MemberTrainerAssignment | null>
+  listByMemberId(memberId: string, signal?: AbortSignal): Promise<MemberTrainerAssignment[]>
+  getCurrentForMember(memberId: string, signal?: AbortSignal): Promise<MemberTrainerAssignment | null>
   assign(memberId: string, trainerId: string): Promise<MemberTrainerAssignment>
   endCurrent(memberId: string): Promise<void>
 }
 
 export const apiMemberTrainerRepository: MemberTrainerRepository = {
-  async listByMemberId(memberId: string): Promise<MemberTrainerAssignment[]> {
+  async listByMemberId(memberId: string, signal?: AbortSignal): Promise<MemberTrainerAssignment[]> {
     try {
-      const res = await apiClient.get<BackendAssignment>(`/api/v1/members/${memberId}/trainer`)
+      const res = await apiClient.get<BackendAssignment>(`/api/v1/members/${memberId}/trainer`, undefined, { signal })
       return [mapBackendAssignment(res)]
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return []
@@ -46,9 +46,9 @@ export const apiMemberTrainerRepository: MemberTrainerRepository = {
     }
   },
 
-  async getCurrentForMember(memberId: string): Promise<MemberTrainerAssignment | null> {
+  async getCurrentForMember(memberId: string, signal?: AbortSignal): Promise<MemberTrainerAssignment | null> {
     try {
-      const res = await apiClient.get<BackendAssignment>(`/api/v1/members/${memberId}/trainer`)
+      const res = await apiClient.get<BackendAssignment>(`/api/v1/members/${memberId}/trainer`, undefined, { signal })
       return mapBackendAssignment(res)
     } catch (err) {
       // 404 ASSIGNMENT_NOT_FOUND is a normal "no trainer" state.

@@ -113,18 +113,18 @@ export interface RecordTransactionInput {
 }
 
 export interface InventoryRepository {
-  list(query?: InventoryListQuery): Promise<PaginatedResponse<InventoryItem>>
-  getById(id: string): Promise<InventoryItem>
+  list(query?: InventoryListQuery, signal?: AbortSignal): Promise<PaginatedResponse<InventoryItem>>
+  getById(id: string, signal?: AbortSignal): Promise<InventoryItem>
   create(input: CreateInventoryItemInput): Promise<InventoryItem>
   update(id: string, input: UpdateInventoryItemInput): Promise<InventoryItem>
   remove(id: string): Promise<void>
-  listTransactionsByItemId(itemId: string): Promise<InventoryTransaction[]>
+  listTransactionsByItemId(itemId: string, signal?: AbortSignal): Promise<InventoryTransaction[]>
   // STOCK_IN adds, STOCK_OUT subtracts (409 on insufficient), ADJUSTMENT sets absolute level.
   recordTransaction(itemId: string, input: RecordTransactionInput): Promise<InventoryTransaction>
 }
 
 export interface InventoryCategoryRepository {
-  list(): Promise<InventoryCategory[]>
+  list(signal?: AbortSignal): Promise<InventoryCategory[]>
   create(input: {
     name: string
     description?: string
@@ -147,10 +147,11 @@ function toQuery(query?: InventoryListQuery): ListQueryParams {
 }
 
 export const apiInventoryRepository: InventoryRepository = {
-  async list(query?: InventoryListQuery): Promise<PaginatedResponse<InventoryItem>> {
+  async list(query?: InventoryListQuery, signal?: AbortSignal): Promise<PaginatedResponse<InventoryItem>> {
     const res = await apiClient.get<PaginatedResponse<BackendInventoryItem>>(
       '/api/v1/inventory',
       toQuery(query),
+      { signal },
     )
     return {
       meta: res.meta,
@@ -158,8 +159,8 @@ export const apiInventoryRepository: InventoryRepository = {
     }
   },
 
-  async getById(id: string): Promise<InventoryItem> {
-    const res = await apiClient.get<BackendInventoryItem>(`/api/v1/inventory/${id}`)
+  async getById(id: string, signal?: AbortSignal): Promise<InventoryItem> {
+    const res = await apiClient.get<BackendInventoryItem>(`/api/v1/inventory/${id}`, undefined, { signal })
     return mapBackendItem(res)
   },
 
@@ -184,9 +185,11 @@ export const apiInventoryRepository: InventoryRepository = {
     await apiClient.delete<void>(`/api/v1/inventory/${id}`)
   },
 
-  async listTransactionsByItemId(itemId: string): Promise<InventoryTransaction[]> {
+  async listTransactionsByItemId(itemId: string, signal?: AbortSignal): Promise<InventoryTransaction[]> {
     const res = await apiClient.get<BackendInventoryTransaction[]>(
       `/api/v1/inventory/${itemId}/transactions`,
+      undefined,
+      { signal },
     )
     return res.map(mapBackendTransaction)
   },
@@ -210,8 +213,8 @@ export const apiInventoryRepository: InventoryRepository = {
 }
 
 export const apiInventoryCategoryRepository: InventoryCategoryRepository = {
-  async list(): Promise<InventoryCategory[]> {
-    const res = await apiClient.get<BackendInventoryCategory[]>('/api/v1/inventory-categories')
+  async list(signal?: AbortSignal): Promise<InventoryCategory[]> {
+    const res = await apiClient.get<BackendInventoryCategory[]>('/api/v1/inventory-categories', undefined, { signal })
     return res.map(mapBackendCategory)
   },
 
