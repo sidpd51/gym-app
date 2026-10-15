@@ -5,7 +5,7 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { nextCode } from '../common/codegen.js';
-import { createPool, queryOne, withTx } from '../db/pool.js';
+import { createPool, newId, queryOne, withTx } from '../db/pool.js';
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -25,7 +25,7 @@ async function main() {
 
   const pool = await createPool(databaseUrl);
   try {
-    if (await queryOne(pool, 'SELECT 1 FROM users WHERE lower(email) = lower($1)', [email])) {
+    if (await queryOne(pool, 'SELECT 1 FROM users WHERE email = ?', [email])) {
       console.log(`seed skipped: user already exists (${email})`);
       return;
     }
@@ -33,9 +33,9 @@ async function main() {
     await withTx(pool, async (tx) => {
       const code = await nextCode(tx, 'user');
       await tx.query(
-        `INSERT INTO users (user_code, first_name, last_name, email, phone, role, status, password_hash)
-         VALUES ($1, $2, $3, $4, NULL, 'OWNER', 'ACTIVE', $5)`,
-        [code, firstName, lastName, email, hash],
+        `INSERT INTO users (id, user_code, first_name, last_name, email, phone, role, status, password_hash)
+         VALUES (?, ?, ?, ?, ?, NULL, 'OWNER', 'ACTIVE', ?)`,
+        [newId(), code, firstName, lastName, email, hash],
       );
     });
     console.log(`seeded OWNER user: ${email}`);

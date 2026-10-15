@@ -82,17 +82,17 @@ export class Scheduler {
       await fn(tx);
       await tx.query(
         `INSERT INTO scheduled_job_runs (job_name, last_run_at, last_status, last_error, updated_at)
-         VALUES ($1, NOW(), 'SUCCESS', NULL, NOW())
-         ON CONFLICT (job_name) DO UPDATE
-         SET last_run_at = EXCLUDED.last_run_at, last_status = EXCLUDED.last_status,
-             last_error = NULL, updated_at = NOW()`,
+         VALUES (?, NOW(3), 'SUCCESS', NULL, NOW(3))
+         ON DUPLICATE KEY UPDATE
+           last_run_at = VALUES(last_run_at), last_status = VALUES(last_status),
+           last_error = NULL, updated_at = NOW(3)`,
         [name],
       );
     });
   }
 
   private async lastRun(name: string): Promise<Date | null> {
-    const res = await this.pool.query('SELECT last_run_at FROM scheduled_job_runs WHERE job_name = $1', [name]);
-    return res.rows[0]?.last_run_at ?? null;
+    const [rows] = await this.pool.query('SELECT last_run_at FROM scheduled_job_runs WHERE job_name = ?', [name]);
+    return (rows as Array<{ last_run_at: Date }>)[0]?.last_run_at ?? null;
   }
 }

@@ -1,4 +1,4 @@
-import type { Db } from '../db/pool.js';
+import { newId, type Db } from '../db/pool.js';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'VIEW' | 'EXPORT';
 export type AuditEntityType =
@@ -25,9 +25,10 @@ export interface AuditEntry {
  */
 export async function auditLog(db: Db, e: AuditEntry): Promise<void> {
   await db.query(
-    `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, entity_name, description, status, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, entity_name, description, status, metadata)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
+      newId(),
       e.userId,
       e.action,
       e.entityType,

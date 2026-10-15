@@ -3,7 +3,7 @@
  * (migrationsDir defaults to $MIGRATIONS_DIR or ./migrations)
  */
 import 'dotenv/config';
-import pg from 'pg';
+import mysql from 'mysql2/promise';
 import { migrate } from '../db/migrate.js';
 
 const [cmd = 'up', dir = process.env.MIGRATIONS_DIR ?? './migrations'] = process.argv.slice(2);
@@ -11,12 +11,11 @@ const [cmd = 'up', dir = process.env.MIGRATIONS_DIR ?? './migrations'] = process
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL is required');
-  const client = new pg.Client({ connectionString: url });
-  await client.connect();
+  const conn = await mysql.createConnection({ uri: url, multipleStatements: true });
   try {
-    await migrate(client, dir, cmd === 'status' ? 'status' : 'up');
+    await migrate(conn, dir, cmd === 'status' ? 'status' : 'up');
   } finally {
-    await client.end();
+    await conn.end();
   }
 }
 

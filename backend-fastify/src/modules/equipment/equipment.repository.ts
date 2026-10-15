@@ -65,7 +65,7 @@ export class EquipmentRepository {
   }
 
   async countEquipment(f: EquipmentFilter, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM equipment ${EQ_FILTER}`, [
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM equipment ${EQ_FILTER}`, [
       f.status || null,
       f.categoryId || null,
     ]);

@@ -1,14 +1,18 @@
--- +goose Up
 CREATE TABLE notification_records (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id     UUID NOT NULL REFERENCES members(id) ON DELETE RESTRICT,
-    membership_id UUID NOT NULL REFERENCES memberships(id) ON DELETE RESTRICT,
-    type          notification_type NOT NULL,
-    channel       notification_channel NOT NULL,
-    status        notification_status NOT NULL DEFAULT 'PENDING',
+    id            CHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),
+    member_id     CHAR(36) NOT NULL,
+    membership_id CHAR(36) NOT NULL,
+    type          ENUM('EXPIRY_REMINDER', 'EXPIRED_NOTICE', 'CUSTOM') NOT NULL,
+    channel       ENUM('SMS', 'WHATSAPP', 'EMAIL', 'IN_APP') NOT NULL,
+    status        ENUM('PENDING', 'SENT', 'FAILED') NOT NULL DEFAULT 'PENDING',
     message       TEXT NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    sent_at       TIMESTAMPTZ
+    created_at    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    sent_at       DATETIME(3),
+    -- Calendar day in IST (UTC+05:30, no DST) for the daily dedupe index.
+    created_date_ist DATE GENERATED ALWAYS AS (DATE(DATE_ADD(created_at, INTERVAL 330 MINUTE))) STORED,
+
+    CONSTRAINT fk_notification_records_member_id FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_notification_records_membership_id FOREIGN KEY (membership_id) REFERENCES memberships(id) ON DELETE RESTRICT
 );
 
 CREATE INDEX idx_notif_member_id ON notification_records(member_id);
@@ -20,7 +24,4 @@ CREATE INDEX idx_notif_created_at ON notification_records(created_at);
 -- Keeps the expiry-reminder scheduler idempotent — safe to re-run during
 -- Intermittent Availability catch-up (see docs 08, 09).
 CREATE UNIQUE INDEX uidx_notif_daily_dedupe
-    ON notification_records (member_id, membership_id, type, ((created_at AT TIME ZONE 'Asia/Kolkata')::date));
-
--- +goose Down
-DROP TABLE IF EXISTS notification_records;
+    ON notification_records (member_id, membership_id, type, created_date_ist);

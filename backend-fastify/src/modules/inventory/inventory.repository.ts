@@ -45,7 +45,7 @@ export class InventoryRepository {
   }
 
   async count(f: ItemFilter, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM inventory_items ${FILTER}`, filterParams(f));
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM inventory_items ${FILTER}`, filterParams(f));
     return row!.count;
   }
 

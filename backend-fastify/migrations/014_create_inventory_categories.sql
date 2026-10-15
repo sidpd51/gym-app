@@ -1,10 +1,6 @@
--- +goose Up
 CREATE TABLE inventory_categories (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          CHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),
     name        VARCHAR(100) NOT NULL,
     description TEXT,
-    status      category_status NOT NULL DEFAULT 'ACTIVE'
+    status      ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE'
 );
-
--- +goose Down
-DROP TABLE IF EXISTS inventory_categories;

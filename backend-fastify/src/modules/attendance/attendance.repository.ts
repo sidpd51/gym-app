@@ -24,7 +24,7 @@ export class AttendanceRepository {
   }
 
   async count(f: AttendanceFilter, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM attendance ${FILTER}`, [f.memberId, f.from, f.to]);
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM attendance ${FILTER}`, [f.memberId, f.from, f.to]);
     return row!.count;
   }
 

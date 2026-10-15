@@ -1,4 +1,3 @@
--- +goose Up
 CREATE TABLE gym_settings (
     id                                      INT PRIMARY KEY DEFAULT 1,
     gym_name                                VARCHAR(100) NOT NULL DEFAULT 'My Gym',
@@ -17,7 +16,4 @@ CREATE TABLE gym_settings (
     CONSTRAINT chk_grace_period_non_negative CHECK (membership_grace_period_days >= 0)
 );
 
-INSERT INTO gym_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
-
--- +goose Down
-DROP TABLE IF EXISTS gym_settings;
+INSERT IGNORE INTO gym_settings (id) VALUES (1) ;

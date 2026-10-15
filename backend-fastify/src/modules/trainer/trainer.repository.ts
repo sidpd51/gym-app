@@ -25,7 +25,7 @@ export class TrainerRepository {
   }
 
   async count(status: string | undefined, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM trainers ${STATUS_FILTER}`, [status || null]);
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM trainers ${STATUS_FILTER}`, [status || null]);
     return row!.count;
   }
 

@@ -1,19 +1,15 @@
--- +goose Up
 CREATE TABLE users (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id            CHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),
     user_code     VARCHAR(20)  NOT NULL UNIQUE,
     first_name    VARCHAR(50)  NOT NULL,
     last_name     VARCHAR(50)  NOT NULL,
     email         VARCHAR(255) NOT NULL UNIQUE,
     phone         VARCHAR(20),
-    role          user_role    NOT NULL,
-    status        user_status  NOT NULL DEFAULT 'ACTIVE',
+    role          ENUM('OWNER', 'ADMIN', 'RECEPTIONIST', 'TRAINER')    NOT NULL,
+    status        ENUM('ACTIVE', 'INACTIVE')  NOT NULL DEFAULT 'ACTIVE',
     password_hash VARCHAR(255) NOT NULL,
-    last_login_at TIMESTAMPTZ,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    last_login_at DATETIME(3),
+    created_at    DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
 
 CREATE INDEX idx_users_role ON users(role);
-
--- +goose Down
-DROP TABLE IF EXISTS users;

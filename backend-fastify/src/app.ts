@@ -4,7 +4,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Config } from './config.js';
-import type { DbPool } from './db/pool.js';
+import { ping, type DbPool } from './db/pool.js';
 import { Signer, registerAuth } from './plugins/auth.js';
 import { registerCsrf } from './plugins/csrf.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
@@ -69,7 +69,7 @@ export async function buildApp(config: Config, pool: DbPool): Promise<FastifyIns
     let db = 'ok';
     try {
       await Promise.race([
-        pool.query('SELECT 1'),
+        ping(pool),
         new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000).unref()),
       ]);
     } catch {

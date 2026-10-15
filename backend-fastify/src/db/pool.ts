@@ -1,71 +1,105 @@
-import pg from 'pg';
+import { randomUUID } from 'node:crypto';
+import mysql from 'mysql2/promise';
 
-const { Pool, types } = pg;
+export type DbPool = mysql.Pool;
+export type DbClient = mysql.PoolConnection;
+/** Anything that can run a query: the pool or a transaction connection. */
+export type Db = mysql.Pool | mysql.PoolConnection;
 
-// DATE -> 'YYYY-MM-DD' string (never a JS Date; avoids timezone shifts).
-types.setTypeParser(1082, (v) => v);
-// int8 (COUNT(*), BIGINT) -> number.
-types.setTypeParser(20, (v) => Number.parseInt(v, 10));
-// NUMERIC stays a string (pg default) — modules convert to Number() where the Go DTO emitted a float.
-
-export type DbPool = pg.Pool;
-export type DbClient = pg.PoolClient;
-/** Anything that can run a query: the pool or a transaction client. */
-export type Db = pg.Pool | pg.PoolClient;
+/** App-generated primary key (MySQL has no INSERT ... RETURNING, so repositories pick the id up front). */
+export const newId = (): string => randomUUID();
 
 export async function createPool(databaseUrl: string): Promise<DbPool> {
-  const pool = new Pool({
-    connectionString: databaseUrl,
-    max: 10,
-    idleTimeoutMillis: 30 * 60_000,
-    maxLifetimeSeconds: 3600,
+  const pool = mysql.createPool({
+    uri: databaseUrl,
+    connectionLimit: 10,
+    charset: 'utf8mb4',
+    // DATETIME columns hold UTC; read/write them as UTC regardless of the server's zone.
+    timezone: 'Z',
+    supportBigNumbers: true,
+    bigNumberStrings: false, // COUNT(*) etc. -> number
+    // affectedRows = rows MATCHED (not changed), like PostgreSQL's rowCount.
+    flags: ['+FOUND_ROWS'],
+    typeCast(field, next) {
+      // DATE -> 'YYYY-MM-DD' string (never a JS Date; avoids timezone shifts).
+      if (field.type === 'DATE') return field.string();
+      // BOOLEAN is TINYINT(1).
+      if (field.type === 'TINY' && field.length === 1) {
+        const v = field.string();
+        return v === null ? null : v === '1';
+      }
+      // DECIMAL stays a string (mysql2 default) — modules convert where the API emitted a number.
+      return next();
+    },
   });
-  // An idle client erroring (e.g. server restart) must not crash the process; the pool replaces it.
-  pool.on('error', (err) => console.error('pg pool idle client error', err.message));
+  // An idle connection erroring (e.g. server restart) must not crash the process; the pool replaces it.
+  pool.on('connection', (c) => c.on('error', (err) => console.error('mysql connection error', err.message)));
   await pool.query('SELECT 1');
   return pool;
 }
 
+/** Cheap liveness probe for /health. */
+export async function ping(pool: DbPool): Promise<void> {
+  await pool.query('SELECT 1');
+}
+
 /** Runs fn in a transaction; commits on success, rolls back on throw. */
 export async function withTx<T>(pool: DbPool, fn: (tx: DbClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
+  const conn = await pool.getConnection();
   try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
     return result;
   } catch (err) {
     try {
-      await client.query('ROLLBACK');
+      await conn.rollback();
     } catch {
       /* connection already broken; original error wins */
     }
     throw err;
   } finally {
-    client.release();
+    conn.release();
   }
 }
 
-/** First row or undefined (the Go code's pgx.ErrNoRows case). */
+/** First row or undefined (the "no rows" case). */
 export async function queryOne<T = any>(db: Db, sql: string, params: unknown[] = []): Promise<T | undefined> {
-  const res = await db.query(sql, params);
-  return res.rows[0] as T | undefined;
+  const [rows] = await db.query(sql, params);
+  return (rows as T[])[0];
 }
 
 export async function queryMany<T = any>(db: Db, sql: string, params: unknown[] = []): Promise<T[]> {
-  const res = await db.query(sql, params);
-  return res.rows as T[];
+  const [rows] = await db.query(sql, params);
+  return rows as T[];
 }
 
-/** Returns number of affected rows (the Go code's `:exec` + RowsAffected). */
+/** Returns the number of matched rows (INSERT/UPDATE/DELETE). */
 export async function exec(db: Db, sql: string, params: unknown[] = []): Promise<number> {
-  const res = await db.query(sql, params);
-  return res.rowCount ?? 0;
+  const [res] = await db.query(sql, params);
+  return (res as mysql.ResultSetHeader).affectedRows ?? 0;
 }
 
-const pgCode = (err: unknown): string => ((err as { code?: string } | null)?.code ?? '');
-export const pgConstraint = (err: unknown): string => (err as { constraint?: string } | null)?.constraint ?? '';
-export const isUniqueViolation = (err: unknown) => pgCode(err) === '23505';
-// 23503 foreign_key_violation; 23001 restrict_violation (raised by ON DELETE RESTRICT, which the schema uses).
-export const isForeignKeyViolation = (err: unknown) => ['23503', '23001'].includes(pgCode(err));
-export const isCheckViolation = (err: unknown) => pgCode(err) === '23514';
+const errno = (err: unknown): number => (err as { errno?: number } | null)?.errno ?? 0;
+
+/** ER_DUP_ENTRY */
+export const isUniqueViolation = (err: unknown) => errno(err) === 1062;
+/** ER_ROW_IS_REFERENCED_2 (delete/update blocked by a child row) and ER_NO_REFERENCED_ROW_2 (insert points at a missing parent). */
+export const isForeignKeyViolation = (err: unknown) => errno(err) === 1451 || errno(err) === 1452;
+/** ER_CHECK_CONSTRAINT_VIOLATED */
+export const isCheckViolation = (err: unknown) => errno(err) === 3819;
+
+/**
+ * Name of the violated key/constraint, parsed from the server message, or ''.
+ * Duplicate: "... for key 'members.phone'" -> 'phone' (also handles a bare 'phone').
+ * FK: "... CONSTRAINT `fk_payments_member_id` FOREIGN KEY ..." -> 'fk_payments_member_id'.
+ * Check: "Check constraint 'chk_x' is violated." -> 'chk_x'.
+ */
+export function constraintName(err: unknown): string {
+  const msg = (err as { sqlMessage?: string } | null)?.sqlMessage ?? '';
+  const m =
+    /for key '(?:[^'.]*\.)?([^']+)'/.exec(msg) ??
+    /CONSTRAINT `([^`]+)`/.exec(msg) ??
+    /[Cc]heck constraint '([^']+)'/.exec(msg);
+  return m?.[1] ?? '';
+}

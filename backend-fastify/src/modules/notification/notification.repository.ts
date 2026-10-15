@@ -18,7 +18,7 @@ export class NotificationRepository {
 
   async count(status: string | undefined, db: Db = this.pool): Promise<number> {
     const row = await queryOne<{ count: number }>(
-      db, `SELECT COUNT(*) FROM notification_records ${STATUS_FILTER}`, [status || null],
+      db, `SELECT COUNT(*) AS count FROM notification_records ${STATUS_FILTER}`, [status || null],
     );
     return row!.count;
   }

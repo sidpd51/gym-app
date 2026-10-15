@@ -31,7 +31,7 @@ export class ExpenseRepository {
   }
 
   async count(f: ExpenseFilter, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM expenses ${FILTER}`, filterParams(f));
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM expenses ${FILTER}`, filterParams(f));
     return row!.count;
   }
 

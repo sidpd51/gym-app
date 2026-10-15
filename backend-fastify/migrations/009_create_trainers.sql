@@ -1,6 +1,5 @@
--- +goose Up
 CREATE TABLE trainers (
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id             CHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),
     trainer_code   VARCHAR(20) NOT NULL UNIQUE,
     first_name     VARCHAR(50) NOT NULL,
     last_name      VARCHAR(50) NOT NULL,
@@ -8,10 +7,7 @@ CREATE TABLE trainers (
     email          VARCHAR(255),
     specialization VARCHAR(100),
     joining_date   DATE NOT NULL,
-    status         trainer_status NOT NULL DEFAULT 'ACTIVE',
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    status         ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+    created_at     DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at     DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
-
--- +goose Down
-DROP TABLE IF EXISTS trainers;

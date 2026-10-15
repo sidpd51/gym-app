@@ -12,10 +12,22 @@ const CODES = {
 
 export type CodeKind = keyof typeof CODES;
 
-/** Allocates the next human-readable code, e.g. MEM-007. Pass a tx client to allocate inside a wider write. */
+/**
+ * Allocates the next human-readable code, e.g. MEM-007, from the code_sequences
+ * counter table (MySQL has no sequences). `LAST_INSERT_ID(expr)` makes the
+ * increment atomic and readable on the same connection. Inside a transaction the
+ * counter row stays locked until commit, so concurrent creates serialize and a
+ * rolled-back create doesn't burn a number.
+ */
 export async function nextCode(db: Db, kind: CodeKind): Promise<string> {
   const [prefix, seq] = CODES[kind];
-  // seq comes from the closed set above, never user input.
-  const res = await db.query(`SELECT nextval('${seq}') AS n`);
-  return `${prefix}-${String(Number(res.rows[0].n)).padStart(3, '0')}`;
+  const isPool = 'getConnection' in db;
+  const conn = isPool ? await db.getConnection() : db;
+  try {
+    await conn.query('UPDATE code_sequences SET current_value = LAST_INSERT_ID(current_value + 1) WHERE name = ?', [seq]);
+    const [rows] = await conn.query('SELECT LAST_INSERT_ID() AS n');
+    return `${prefix}-${String(Number((rows as Array<{ n: number | string }>)[0].n)).padStart(3, '0')}`;
+  } finally {
+    if (isPool) (conn as import('mysql2/promise').PoolConnection).release();
+  }
 }

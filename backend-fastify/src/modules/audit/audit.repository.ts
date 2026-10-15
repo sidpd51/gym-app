@@ -23,7 +23,7 @@ export class AuditRepository {
   }
 
   async count(f: AuditFilter, db: Db = this.pool): Promise<number> {
-    return (await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM audit_logs ${WHERE}`, params(f)))!.count;
+    return (await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM audit_logs ${WHERE}`, params(f)))!.count;
   }
 
   findById(id: string, db: Db = this.pool) {

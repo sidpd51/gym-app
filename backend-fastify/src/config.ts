@@ -28,8 +28,8 @@ const schema = z.object({
   LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().default(5),
   HTTPS_CERT: z.string().optional(),
   HTTPS_KEY: z.string().optional(),
-  PGDUMP_BIN: z.string().optional(),
-  PSQL_BIN: z.string().optional(),
+  MYSQLDUMP_BIN: z.string().optional(),
+  MYSQL_BIN: z.string().optional(),
   BACKUP_USE_DOCKER_EXEC: z.string().optional(),
   BACKUP_DOCKER_CONTAINER: z.string().optional(),
 });
@@ -48,8 +48,8 @@ export interface Config {
   loginRateLimitMax: number;
   httpsCert?: string;
   httpsKey?: string;
-  pgDumpBin?: string;
-  psqlBin?: string;
+  mysqlDumpBin?: string;
+  mysqlBin?: string;
   backupUseDockerExec: boolean;
   backupDockerContainer: string;
 }
@@ -69,9 +69,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     loginRateLimitMax: e.LOGIN_RATE_LIMIT_MAX,
     httpsCert: e.HTTPS_CERT || undefined,
     httpsKey: e.HTTPS_KEY || undefined,
-    pgDumpBin: e.PGDUMP_BIN || undefined,
-    psqlBin: e.PSQL_BIN || undefined,
+    mysqlDumpBin: e.MYSQLDUMP_BIN || undefined,
+    mysqlBin: e.MYSQL_BIN || undefined,
     backupUseDockerExec: e.BACKUP_USE_DOCKER_EXEC === '1' || e.BACKUP_USE_DOCKER_EXEC === 'true',
-    backupDockerContainer: e.BACKUP_DOCKER_CONTAINER || 'gym-postgres',
+    backupDockerContainer: e.BACKUP_DOCKER_CONTAINER || 'gym-mysql',
   };
 }

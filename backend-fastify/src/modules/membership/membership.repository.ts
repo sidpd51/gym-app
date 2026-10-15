@@ -30,7 +30,7 @@ export class MembershipRepository {
   }
 
   async count(f: { status?: string; memberId?: string }, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM memberships ${FILTER}`, [
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM memberships ${FILTER}`, [
       f.status || null,
       f.memberId || null,
     ]);

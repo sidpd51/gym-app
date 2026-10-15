@@ -31,7 +31,7 @@ export class PaymentRepository {
   }
 
   async count(f: PaymentFilter, db: Db = this.pool): Promise<number> {
-    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) FROM payments ${FILTER}`, [f.status, f.memberId, f.from, f.to]);
+    const row = await queryOne<{ count: number }>(db, `SELECT COUNT(*) AS count FROM payments ${FILTER}`, [f.status, f.memberId, f.from, f.to]);
     return row!.count;
   }
 

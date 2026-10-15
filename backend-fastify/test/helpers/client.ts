@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
 import type { Config } from '../../src/config.js';
 import { buildApp } from '../../src/app.js';
-import { createPool, type DbPool } from '../../src/db/pool.js';
+import { createPool, newId, type DbPool } from '../../src/db/pool.js';
 import { nextCode } from '../../src/common/codegen.js';
 
 export function testConfig(databaseUrl: string): Config {
@@ -12,19 +12,20 @@ export function testConfig(databaseUrl: string): Config {
     cookieSecret: 'test-cookie-secret-test-cookie-secret-0123',
     frontendOrigin: 'http://localhost:5173', sessionTtlMs: 8 * 3600_000,
     backupDir: '/tmp/gym-test-backups', logLevel: process.env.TEST_LOG ?? 'silent', loginRateLimitMax: 1000,
-    backupUseDockerExec: false, backupDockerContainer: 'gym-postgres',
+    backupUseDockerExec: false, backupDockerContainer: 'gym-mysql',
   };
 }
 
 export async function createUser(pool: DbPool, email: string, role: string, password = 'Passw0rd!x') {
   const hash = await bcrypt.hash(password, 4);
   const code = await nextCode(pool, 'user');
-  const res = await pool.query(
-    `INSERT INTO users (user_code, first_name, last_name, email, role, status, password_hash)
-     VALUES ($1,'Test','User',$2,$3,'ACTIVE',$4) RETURNING id`,
-    [code, email, role, hash],
+  const id = newId();
+  await pool.query(
+    `INSERT INTO users (id, user_code, first_name, last_name, email, role, status, password_hash)
+     VALUES (?,?,'Test','User',?,?,'ACTIVE',?)`,
+    [id, code, email, role, hash],
   );
-  return { id: res.rows[0].id as string, email, password };
+  return { id, email, password };
 }
 
 /** HTTP-level test client that keeps cookies and handles CSRF like the browser frontend does. */
