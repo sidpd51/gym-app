@@ -51,11 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-build]
     env:
+      # JWT_SECRET / COOKIE_SECRET generated at runtime (see first step) —
+      # keeps the YAML free of anything that looks like a credential.
       SEED_EMAIL: 'owner@example.com'
       SEED_PASSWORD: 'ChangeMe123!'
       DATABASE_URL: mysql://gymuser:dev@127.0.0.1:3306/gymdb
-      JWT_SECRET: ci-jwt-secret-value-that-is-definitely-long-enough-for-tests
-      COOKIE_SECRET: ci-cookie-secret-value-that-is-definitely-long-enough-for-tests
       FRONTEND_ORIGIN: http://localhost:5173
       VITE_API_BASE_URL: http://localhost:8080
       PORT: 8080
@@ -89,6 +89,13 @@ jobs:
           cache-dependency-path: |
             backend-fastify/package-lock.json
             frontend/package-lock.json
+
+      - name: Generate ephemeral test secrets
+        run: |
+          {
+            echo "JWT_SECRET=$(openssl rand -hex 32)"
+            echo "COOKIE_SECRET=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
 
       - name: Install backend deps
         working-directory: backend-fastify
