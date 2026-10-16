@@ -1,0 +1,12 @@
+<!-- The Elite Club — Architectural EC Monogram (brand book concept 01) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Black C: thick open ring, mouth facing right -->
+  <path d="M58 10 L48 10 A40 40 0 1 0 48 90 L58 90 L58 76 L48 76 A26 26 0 1 1 48 24 L58 24 Z" fill="#0A0A0A"/>
+  <!-- Gold E: three horizontal bars on a vertical spine, interlocked with C's opening -->
+  <g fill="#C7A456">
+    <rect x="46" y="18" width="38" height="12"/>
+    <rect x="46" y="44" width="30" height="12"/>
+    <rect x="46" y="70" width="38" height="12"/>
+    <rect x="46" y="18" width="12" height="64"/>
+  </g>
+</svg>
